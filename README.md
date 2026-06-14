@@ -110,9 +110,7 @@ Create a release build:
 dotnet publish -c Release -r win-x64 --self-contained false -o .\publish\win-x64
 ```
 
-## Git And Release Workflow
-
-For GitKraken and GitHub setup, see [GIT_WORKFLOW.md](GIT_WORKFLOW.md).
+## Release Workflow
 
 Release notes are maintained in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
