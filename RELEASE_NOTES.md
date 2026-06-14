@@ -1,10 +1,16 @@
-# Windget v0.1.0
+# Windget v0.1.1
 
-Windget v0.1.0 is the first public GitHub release of the Windows desktop widget app.
+Windget v0.1.1 is a patch release focused on Sound Mixer reliability.
 
-Earlier local development builds used internal version labels, but the public GitHub release history starts here from `v0.1.0`.
+Earlier local development builds used internal version labels, and the public GitHub release history starts from `v0.1.0`.
 
-## Highlights
+## Fixes
+
+- Fixed Sound Mixer playback and recording device changes so the selected Windows audio endpoint is applied correctly.
+- Fixed Sound Mixer device picker placement so the selection popup opens next to the control instead of jumping to another position.
+- Added scrolling and safer sizing for long Sound Mixer device lists.
+
+## v0.1.0 Highlights
 
 - Transparent desktop canvas with click-through empty areas
 - Movable and resizable widgets with alignment guides
@@ -28,7 +34,7 @@ Earlier local development builds used internal version labels, but the public Gi
 Recommended release asset name:
 
 ```text
-Windget-v0.1.0-win-x64.zip
+Windget-v0.1.1-win-x64.zip
 ```
 
 ## AI Usage Disclosure

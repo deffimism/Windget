@@ -1,6 +1,6 @@
 # Windget
 
-Current public version: `v0.1.0`
+Current public version: `v0.1.1`
 
 Windget is a lightweight Windows desktop widget app built with WPF and .NET. It places a transparent desktop canvas over the wallpaper and lets you arrange memo cards, system resource graphs, a sound mixer, calendar events, a timer/stopwatch, and quick launcher tiles.
 
@@ -48,6 +48,7 @@ This repository is organized as a fresh public GitHub project starting from `v0.
 - Playback device and recording device selection
 - Per-app output device selection where Windows audio policy supports it
 - MMDevices-backed fallback for detecting more playback and recording devices
+- Stable device picker placement inside the widget canvas
 
 ### Calendar
 
@@ -74,7 +75,7 @@ This repository is organized as a fresh public GitHub project starting from `v0.
 Download the latest release ZIP from GitHub Releases:
 
 ```text
-Windget-v0.1.0-win-x64.zip
+Windget-v0.1.1-win-x64.zip
 ```
 
 Extract it to a folder you control, then run:

@@ -1998,8 +1998,8 @@ public partial class MainWindow : Window
     {
         System.Windows.Controls.Primitives.Popup popup = new()
         {
-            PlacementTarget = targetButton,
-            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+            PlacementTarget = this,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Relative,
             StaysOpen = false,
             AllowsTransparency = true
         };
@@ -2011,7 +2011,9 @@ public partial class MainWindow : Window
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(10),
             Padding = new Thickness(8),
-            MaxWidth = 360
+            MinWidth = Math.Min(360, Math.Max(180, targetButton.ActualWidth)),
+            MaxWidth = 360,
+            MaxHeight = Math.Max(160, Math.Min(420, ActualHeight - 24))
         };
 
         StackPanel list = new();
@@ -2047,9 +2049,46 @@ public partial class MainWindow : Window
             }
         }
 
-        shell.Child = list;
+        shell.Child = new ScrollViewer
+        {
+            Content = list,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
         popup.Child = shell;
+        PositionAudioDevicePickerPopup(popup, targetButton, shell);
         popup.IsOpen = true;
+    }
+
+    private void PositionAudioDevicePickerPopup(
+        System.Windows.Controls.Primitives.Popup popup,
+        WpfButton targetButton,
+        FrameworkElement popupContent)
+    {
+        popupContent.Measure(new WpfSize(double.PositiveInfinity, double.PositiveInfinity));
+
+        WpfPoint belowButton = targetButton.TranslatePoint(new WpfPoint(0, targetButton.ActualHeight + 4), this);
+        WpfPoint aboveButton = targetButton.TranslatePoint(new WpfPoint(0, -4), this);
+
+        double popupWidth = Math.Min(
+            popupContent.MaxWidth > 0 ? popupContent.MaxWidth : popupContent.DesiredSize.Width,
+            Math.Max(popupContent.MinWidth, popupContent.DesiredSize.Width));
+        double popupHeight = Math.Min(
+            popupContent.MaxHeight > 0 ? popupContent.MaxHeight : popupContent.DesiredSize.Height,
+            popupContent.DesiredSize.Height);
+
+        double leftLimit = Math.Max(8, ActualWidth - popupWidth - 8);
+        double topLimit = Math.Max(8, ActualHeight - popupHeight - 8);
+        double left = Math.Clamp(belowButton.X, 8, leftLimit);
+        double top = belowButton.Y;
+
+        if (top + popupHeight > ActualHeight - 8)
+        {
+            top = aboveButton.Y - popupHeight;
+        }
+
+        popup.HorizontalOffset = left;
+        popup.VerticalOffset = Math.Clamp(top, 8, topLimit);
     }
 
     private static string GetAudioDeviceButtonText(IReadOnlyList<AudioDeviceInfo> devices, string selectedDeviceId, string fallback)
@@ -4372,6 +4411,7 @@ internal interface IPolicyConfig
 {
     void GetMixFormat([MarshalAs(UnmanagedType.LPWStr)] string deviceName, out IntPtr mixFormat);
     void GetDeviceFormat([MarshalAs(UnmanagedType.LPWStr)] string deviceName, [MarshalAs(UnmanagedType.Bool)] bool defaultFormat, out IntPtr deviceFormat);
+    void ResetDeviceFormat([MarshalAs(UnmanagedType.LPWStr)] string deviceName);
     void SetDeviceFormat([MarshalAs(UnmanagedType.LPWStr)] string deviceName, IntPtr endpointFormat, IntPtr mixFormat);
     void GetProcessingPeriod([MarshalAs(UnmanagedType.LPWStr)] string deviceName, [MarshalAs(UnmanagedType.Bool)] bool defaultPeriod, out long defaultPeriodValue, out long minimumPeriodValue);
     void SetProcessingPeriod([MarshalAs(UnmanagedType.LPWStr)] string deviceName, ref long period);
