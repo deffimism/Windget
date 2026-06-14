@@ -1976,16 +1976,28 @@ public partial class MainWindow : Window
         {
             ShowAudioDevicePicker(button, _audioMixer.PlaybackDevices, _audioMixer.DefaultPlaybackDeviceId, deviceId =>
             {
-                _audioMixer.SetDefaultDevice(deviceId, EDataFlow.Render);
-                RefreshAudioMixer(true);
+                if (_audioMixer.SetDefaultDevice(deviceId, EDataFlow.Render))
+                {
+                    RefreshAudioMixer(true);
+                }
+                else
+                {
+                    SoundUpdatedText.Text = "Could Not Change Playback Device.";
+                }
             });
         }
         else if (button == RecordingDeviceButton)
         {
             ShowAudioDevicePicker(button, _audioMixer.RecordingDevices, _audioMixer.DefaultRecordingDeviceId, deviceId =>
             {
-                _audioMixer.SetDefaultDevice(deviceId, EDataFlow.Capture);
-                RefreshAudioMixer(true);
+                if (_audioMixer.SetDefaultDevice(deviceId, EDataFlow.Capture))
+                {
+                    RefreshAudioMixer(true);
+                }
+                else
+                {
+                    SoundUpdatedText.Text = "Could Not Change Recording Device.";
+                }
             });
         }
     }
@@ -3993,23 +4005,36 @@ internal sealed class AudioMixerService
         return processId == 0 ? "System Sounds" : $"Process {processId}";
     }
 
-    public void SetDefaultDevice(string deviceId, EDataFlow flow)
+    public bool SetDefaultDevice(string deviceId, EDataFlow flow)
     {
         if (string.IsNullOrWhiteSpace(deviceId))
         {
-            return;
+            return false;
         }
 
         try
         {
             IPolicyConfig policyConfig = (IPolicyConfig)(object)new PolicyConfigClient();
-            policyConfig.SetDefaultEndpoint(deviceId, ERole.Console);
-            policyConfig.SetDefaultEndpoint(deviceId, ERole.Multimedia);
-            policyConfig.SetDefaultEndpoint(deviceId, ERole.Communications);
+            ThrowIfFailed(policyConfig.SetDefaultEndpoint(deviceId, ERole.Console));
+            ThrowIfFailed(policyConfig.SetDefaultEndpoint(deviceId, ERole.Multimedia));
+            ThrowIfFailed(policyConfig.SetDefaultEndpoint(deviceId, ERole.Communications));
+
+            for (int i = 0; i < 5; i++)
+            {
+                string currentDeviceId = TryGetDefaultDeviceId(flow);
+                if (deviceId.Equals(currentDeviceId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                Thread.Sleep(80);
+            }
         }
         catch
         {
         }
+
+        return false;
     }
 
     public void SetApplicationOutputDevice(uint processId, string deviceId)
@@ -4059,15 +4084,18 @@ internal sealed class AudioMixerService
         {
         }
 
-        try
+        if (devices.Count == 0)
         {
-            devices.AddRange(EnumerateDevices(flow, DeviceStateAll));
-        }
-        catch
-        {
-        }
+            try
+            {
+                devices.AddRange(EnumerateDevices(flow, DeviceStateAll));
+            }
+            catch
+            {
+            }
 
-        devices.AddRange(GetRegistryAudioDevices(flow));
+            devices.AddRange(GetRegistryAudioDevices(flow));
+        }
 
         AudioDeviceInfo? defaultDevice = TryGetDefaultDeviceInfo(flow);
         if (defaultDevice is not null)
@@ -4276,6 +4304,14 @@ internal sealed class AudioMixerService
         return (T)instance;
     }
 
+    private static void ThrowIfFailed(int hresult)
+    {
+        if (hresult < 0)
+        {
+            Marshal.ThrowExceptionForHR(hresult);
+        }
+    }
+
     [DllImport("ole32.dll")]
     private static extern int PropVariantClear(ref PropVariant propVariant);
 }
@@ -4327,7 +4363,7 @@ internal interface IMMDeviceEnumerator
 }
 
 [ComImport]
-[Guid("0BD7A1BE-7A1A-44DB-8397-C0F7E9B7332D")]
+[Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E")]
 [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal interface IMMDeviceCollection
 {
@@ -4409,18 +4445,18 @@ internal sealed class PolicyConfigClient
 [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal interface IPolicyConfig
 {
-    void GetMixFormat([MarshalAs(UnmanagedType.LPWStr)] string deviceName, out IntPtr mixFormat);
-    void GetDeviceFormat([MarshalAs(UnmanagedType.LPWStr)] string deviceName, [MarshalAs(UnmanagedType.Bool)] bool defaultFormat, out IntPtr deviceFormat);
-    void ResetDeviceFormat([MarshalAs(UnmanagedType.LPWStr)] string deviceName);
-    void SetDeviceFormat([MarshalAs(UnmanagedType.LPWStr)] string deviceName, IntPtr endpointFormat, IntPtr mixFormat);
-    void GetProcessingPeriod([MarshalAs(UnmanagedType.LPWStr)] string deviceName, [MarshalAs(UnmanagedType.Bool)] bool defaultPeriod, out long defaultPeriodValue, out long minimumPeriodValue);
-    void SetProcessingPeriod([MarshalAs(UnmanagedType.LPWStr)] string deviceName, ref long period);
-    void GetShareMode([MarshalAs(UnmanagedType.LPWStr)] string deviceName, out IntPtr mode);
-    void SetShareMode([MarshalAs(UnmanagedType.LPWStr)] string deviceName, IntPtr mode);
-    void GetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string deviceName, ref PropertyKey key, out PropVariant value);
-    void SetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string deviceName, ref PropertyKey key, ref PropVariant value);
-    void SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string deviceName, ERole role);
-    void SetEndpointVisibility([MarshalAs(UnmanagedType.LPWStr)] string deviceName, [MarshalAs(UnmanagedType.Bool)] bool isVisible);
+    [PreserveSig] int GetMixFormat([MarshalAs(UnmanagedType.LPWStr)] string deviceName, out IntPtr mixFormat);
+    [PreserveSig] int GetDeviceFormat([MarshalAs(UnmanagedType.LPWStr)] string deviceName, [MarshalAs(UnmanagedType.Bool)] bool defaultFormat, out IntPtr deviceFormat);
+    [PreserveSig] int ResetDeviceFormat([MarshalAs(UnmanagedType.LPWStr)] string deviceName);
+    [PreserveSig] int SetDeviceFormat([MarshalAs(UnmanagedType.LPWStr)] string deviceName, IntPtr endpointFormat, IntPtr mixFormat);
+    [PreserveSig] int GetProcessingPeriod([MarshalAs(UnmanagedType.LPWStr)] string deviceName, [MarshalAs(UnmanagedType.Bool)] bool defaultPeriod, out long defaultPeriodValue, out long minimumPeriodValue);
+    [PreserveSig] int SetProcessingPeriod([MarshalAs(UnmanagedType.LPWStr)] string deviceName, ref long period);
+    [PreserveSig] int GetShareMode([MarshalAs(UnmanagedType.LPWStr)] string deviceName, out IntPtr mode);
+    [PreserveSig] int SetShareMode([MarshalAs(UnmanagedType.LPWStr)] string deviceName, IntPtr mode);
+    [PreserveSig] int GetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string deviceName, ref PropertyKey key, out PropVariant value);
+    [PreserveSig] int SetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string deviceName, ref PropertyKey key, ref PropVariant value);
+    [PreserveSig] int SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string deviceName, ERole role);
+    [PreserveSig] int SetEndpointVisibility([MarshalAs(UnmanagedType.LPWStr)] string deviceName, [MarshalAs(UnmanagedType.Bool)] bool isVisible);
 }
 
 [ComImport]

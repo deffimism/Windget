@@ -1,12 +1,18 @@
-# Windget v0.1.1
+# Windget v0.1.2
 
-Windget v0.1.1 is a patch release focused on Sound Mixer reliability.
+Windget v0.1.2 is a patch release focused on Sound Mixer device switching reliability.
 
 Earlier local development builds used internal version labels, and the public GitHub release history starts from `v0.1.0`.
 
 ## Fixes
 
-- Fixed Sound Mixer playback and recording device changes so the selected Windows audio endpoint is applied correctly.
+- Fixed MMDevice endpoint enumeration by correcting the `IMMDeviceCollection` COM interface ID.
+- Fixed Sound Mixer playback and recording device changes so selected active Windows audio endpoints are applied and verified correctly.
+- Reduced invalid device selections by preferring active Windows audio endpoints over fallback registry entries.
+- Added explicit failure feedback when Windows rejects or fails to apply a default device change.
+
+## v0.1.1 Fixes
+
 - Fixed Sound Mixer device picker placement so the selection popup opens next to the control instead of jumping to another position.
 - Added scrolling and safer sizing for long Sound Mixer device lists.
 
@@ -34,7 +40,7 @@ Earlier local development builds used internal version labels, and the public Gi
 Recommended release asset name:
 
 ```text
-Windget-v0.1.1-win-x64.zip
+Windget-v0.1.2-win-x64.zip
 ```
 
 ## AI Usage Disclosure
