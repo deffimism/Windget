@@ -1908,19 +1908,16 @@ public partial class MainWindow : Window
 
             if (session.ProcessId > 0)
             {
-                string selectedDeviceId = string.IsNullOrWhiteSpace(session.OutputDeviceId)
-                    ? _audioMixer.DefaultPlaybackDeviceId
-                    : session.OutputDeviceId;
-                WpfButton deviceButton = CreateAudioDevicePickerButton(
-                    GetAudioDeviceButtonText(_audioMixer.PlaybackDevices, selectedDeviceId, "Default Output"),
-                    "\uE995",
-                    selectedDeviceId,
-                    _audioMixer.PlaybackDevices,
-                    deviceId =>
-                    {
-                        _audioMixer.SetApplicationOutputDevice(session.ProcessId, deviceId);
-                        RefreshAudioMixer(true);
-                    });
+                WpfButton deviceButton = new()
+                {
+                    Content = "App Output Settings",
+                    Tag = "\uE995",
+                    ToolTip = "Open Windows Volume Mixer to choose this app's output device.",
+                    Style = (Style)FindResource("IconActionButton"),
+                    HorizontalContentAlignment = System.Windows.HorizontalAlignment.Left,
+                    MinHeight = 32
+                };
+                deviceButton.Click += (_, _) => OpenWindowsAppVolumeSettings();
                 deviceButton.Margin = new Thickness(10, 8, 0, 0);
 
                 Grid.SetRow(deviceButton, 2);
@@ -1931,6 +1928,33 @@ public partial class MainWindow : Window
 
             card.Child = grid;
             AudioSessionsPanel.Children.Add(card);
+        }
+    }
+
+    private void OpenWindowsAppVolumeSettings()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("ms-settings:apps-volume")
+            {
+                UseShellExecute = true
+            });
+            SoundUpdatedText.Text = "Opened Windows App Volume Settings.";
+        }
+        catch
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo("ms-settings:sound")
+                {
+                    UseShellExecute = true
+                });
+                SoundUpdatedText.Text = "Opened Windows Sound Settings.";
+            }
+            catch
+            {
+                SoundUpdatedText.Text = "Could Not Open Windows Sound Settings.";
+            }
         }
     }
 
@@ -1976,13 +2000,14 @@ public partial class MainWindow : Window
         {
             ShowAudioDevicePicker(button, _audioMixer.PlaybackDevices, _audioMixer.DefaultPlaybackDeviceId, deviceId =>
             {
-                if (_audioMixer.SetDefaultDevice(deviceId, EDataFlow.Render))
+                if (_audioMixer.SetDefaultDevice(deviceId, EDataFlow.Render, out string status))
                 {
                     RefreshAudioMixer(true);
+                    SoundUpdatedText.Text = status;
                 }
                 else
                 {
-                    SoundUpdatedText.Text = "Could Not Change Playback Device.";
+                    SoundUpdatedText.Text = status;
                 }
             });
         }
@@ -1990,13 +2015,14 @@ public partial class MainWindow : Window
         {
             ShowAudioDevicePicker(button, _audioMixer.RecordingDevices, _audioMixer.DefaultRecordingDeviceId, deviceId =>
             {
-                if (_audioMixer.SetDefaultDevice(deviceId, EDataFlow.Capture))
+                if (_audioMixer.SetDefaultDevice(deviceId, EDataFlow.Capture, out string status))
                 {
                     RefreshAudioMixer(true);
+                    SoundUpdatedText.Text = status;
                 }
                 else
                 {
-                    SoundUpdatedText.Text = "Could Not Change Recording Device.";
+                    SoundUpdatedText.Text = status;
                 }
             });
         }
@@ -3822,7 +3848,7 @@ internal sealed class AudioMixerService
                     }
 
                     string name = GetSessionName(control2, processId);
-                    string outputDeviceId = processId > 0 ? GetApplicationOutputDevice(processId) : string.Empty;
+                    string outputDeviceId = string.Empty;
                     _sessionVolumes[id] = volume;
                     sessions.Add(new AudioSessionInfo(id, name, processId, outputDeviceId, Math.Clamp(sessionVolume, 0, 1), muted));
                 }
@@ -4005,72 +4031,82 @@ internal sealed class AudioMixerService
         return processId == 0 ? "System Sounds" : $"Process {processId}";
     }
 
-    public bool SetDefaultDevice(string deviceId, EDataFlow flow)
+    public bool SetDefaultDevice(string deviceId, EDataFlow flow, out string status)
     {
+        string deviceKind = flow == EDataFlow.Capture ? "Recording" : "Playback";
         if (string.IsNullOrWhiteSpace(deviceId))
         {
+            status = $"Could Not Change {deviceKind} Device.";
             return false;
         }
 
         try
         {
+            IMMDevice targetDevice = GetDevice(deviceId);
+            targetDevice.GetState(out uint state);
+            if ((state & DeviceStateActive) == 0)
+            {
+                status = $"Could Not Change {deviceKind} Device: Device Is Not Active.";
+                return false;
+            }
+
+            IMMEndpoint endpoint = (IMMEndpoint)targetDevice;
+            endpoint.GetDataFlow(out EDataFlow targetFlow);
+            if (targetFlow != flow)
+            {
+                status = $"Could Not Change {deviceKind} Device: Device Type Mismatch.";
+                return false;
+            }
+
             IPolicyConfig policyConfig = (IPolicyConfig)(object)new PolicyConfigClient();
             ThrowIfFailed(policyConfig.SetDefaultEndpoint(deviceId, ERole.Console));
             ThrowIfFailed(policyConfig.SetDefaultEndpoint(deviceId, ERole.Multimedia));
             ThrowIfFailed(policyConfig.SetDefaultEndpoint(deviceId, ERole.Communications));
 
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 10; i++)
             {
-                string currentDeviceId = TryGetDefaultDeviceId(flow);
-                if (deviceId.Equals(currentDeviceId, StringComparison.OrdinalIgnoreCase))
+                if (IsDefaultDeviceForAllRoles(deviceId, flow))
                 {
+                    status = $"{deviceKind} Device Changed.";
                     return true;
                 }
 
-                Thread.Sleep(80);
+                Thread.Sleep(100);
             }
+
+            status = $"Could Not Change {deviceKind} Device: Windows Did Not Apply The Selection.";
         }
-        catch
+        catch (Exception ex)
         {
+            status = $"Could Not Change {deviceKind} Device: 0x{ex.HResult:X8}";
+            return false;
         }
 
         return false;
     }
 
-    public void SetApplicationOutputDevice(uint processId, string deviceId)
+    private static bool IsDefaultDeviceForAllRoles(string deviceId, EDataFlow flow)
     {
-        if (processId == 0 || string.IsNullOrWhiteSpace(deviceId))
-        {
-            return;
-        }
-
-        try
-        {
-            IAudioPolicyConfigFactory factory = (IAudioPolicyConfigFactory)(object)new AudioPolicyConfigFactoryClient();
-            factory.SetPersistedDefaultAudioEndpoint(processId, EDataFlow.Render, ERole.Multimedia, deviceId);
-        }
-        catch
-        {
-        }
+        return deviceId.Equals(TryGetDefaultDeviceId(flow, ERole.Console), StringComparison.OrdinalIgnoreCase)
+            && deviceId.Equals(TryGetDefaultDeviceId(flow, ERole.Multimedia), StringComparison.OrdinalIgnoreCase)
+            && deviceId.Equals(TryGetDefaultDeviceId(flow, ERole.Communications), StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string GetApplicationOutputDevice(uint processId)
+    private static IMMDevice GetDevice(string deviceId)
     {
-        if (processId == 0)
+        IMMDeviceEnumerator enumerator = (IMMDeviceEnumerator)(object)new MMDeviceEnumerator();
+        enumerator.GetDevice(deviceId, out IMMDevice device);
+        return device;
+    }
+
+    public bool SetDefaultDevice(string deviceId, EDataFlow flow)
+    {
+        if (SetDefaultDevice(deviceId, flow, out _))
         {
-            return string.Empty;
+            return true;
         }
 
-        try
-        {
-            IAudioPolicyConfigFactory factory = (IAudioPolicyConfigFactory)(object)new AudioPolicyConfigFactoryClient();
-            factory.GetPersistedDefaultAudioEndpoint(processId, EDataFlow.Render, ERole.Multimedia, out string deviceId);
-            return deviceId ?? string.Empty;
-        }
-        catch
-        {
-            return string.Empty;
-        }
+        return false;
     }
 
     private static List<AudioDeviceInfo> GetDevices(EDataFlow flow)
@@ -4236,16 +4272,26 @@ internal sealed class AudioMixerService
 
     private static string GetDefaultDeviceId(EDataFlow flow)
     {
-        IMMDevice device = GetDefaultDevice(flow);
+        return GetDefaultDeviceId(flow, ERole.Multimedia);
+    }
+
+    private static string GetDefaultDeviceId(EDataFlow flow, ERole role)
+    {
+        IMMDevice device = GetDefaultDevice(flow, role);
         device.GetId(out string id);
         return id;
     }
 
     private static string TryGetDefaultDeviceId(EDataFlow flow)
     {
+        return TryGetDefaultDeviceId(flow, ERole.Multimedia);
+    }
+
+    private static string TryGetDefaultDeviceId(EDataFlow flow, ERole role)
+    {
         try
         {
-            return GetDefaultDeviceId(flow);
+            return GetDefaultDeviceId(flow, role);
         }
         catch
         {
@@ -4271,8 +4317,13 @@ internal sealed class AudioMixerService
 
     private static IMMDevice GetDefaultDevice(EDataFlow flow)
     {
+        return GetDefaultDevice(flow, ERole.Multimedia);
+    }
+
+    private static IMMDevice GetDefaultDevice(EDataFlow flow, ERole role)
+    {
         IMMDeviceEnumerator enumerator = (IMMDeviceEnumerator)(object)new MMDeviceEnumerator();
-        enumerator.GetDefaultAudioEndpoint(flow, ERole.Multimedia, out IMMDevice device);
+        enumerator.GetDefaultAudioEndpoint(flow, role, out IMMDevice device);
         return device;
     }
 
@@ -4314,6 +4365,7 @@ internal sealed class AudioMixerService
 
     [DllImport("ole32.dll")]
     private static extern int PropVariantClear(ref PropVariant propVariant);
+
 }
 
 internal sealed record AudioMixerSnapshot(
@@ -4360,6 +4412,15 @@ internal interface IMMDeviceEnumerator
 {
     void EnumAudioEndpoints(EDataFlow dataFlow, uint stateMask, out IMMDeviceCollection devices);
     void GetDefaultAudioEndpoint(EDataFlow dataFlow, ERole role, out IMMDevice endpoint);
+    void GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice device);
+}
+
+[ComImport]
+[Guid("1BE09788-6894-4089-8586-9A2A6C265AC5")]
+[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IMMEndpoint
+{
+    void GetDataFlow(out EDataFlow dataFlow);
 }
 
 [ComImport]
@@ -4457,23 +4518,6 @@ internal interface IPolicyConfig
     [PreserveSig] int SetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string deviceName, ref PropertyKey key, ref PropVariant value);
     [PreserveSig] int SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string deviceName, ERole role);
     [PreserveSig] int SetEndpointVisibility([MarshalAs(UnmanagedType.LPWStr)] string deviceName, [MarshalAs(UnmanagedType.Bool)] bool isVisible);
-}
-
-[ComImport]
-[Guid("2A59116E-2434-11E4-A311-40F2E9B84D6B")]
-internal sealed class AudioPolicyConfigFactoryClient
-{
-}
-
-[ComImport]
-[Guid("AB3D4648-E242-459F-B02F-541C70306324")]
-[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-internal interface IAudioPolicyConfigFactory
-{
-    void SetPersistedDefaultAudioEndpoint(uint processId, EDataFlow flow, ERole role, [MarshalAs(UnmanagedType.LPWStr)] string deviceId);
-    void GetPersistedDefaultAudioEndpoint(uint processId, EDataFlow flow, ERole role, [MarshalAs(UnmanagedType.LPWStr)] out string deviceId);
-    void ClearAllPersistedApplicationDefaultEndpoints();
-    void ClearPersistedDefaultAudioEndpoint(uint processId, EDataFlow flow, ERole role);
 }
 
 [ComImport]

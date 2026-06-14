@@ -1,10 +1,28 @@
-# Windget v0.1.2
+# Windget v0.1.5
 
-Windget v0.1.2 is a patch release focused on Sound Mixer device switching reliability.
+Windget v0.1.5 is a stability-focused patch release for Sound Mixer per-application output routing.
 
 Earlier local development builds used internal version labels, and the public GitHub release history starts from `v0.1.0`.
 
-## Fixes
+## v0.1.5 Fixes
+
+- Replaced unsupported internal per-application output routing calls with a stable shortcut to Windows App Volume Settings.
+- Removed dependency on Windows internal audio policy vtable slots for per-app output changes.
+- Kept default playback and recording device switching in-app, where the Windows audio policy path is more stable.
+
+## v0.1.4 Fixes
+
+- Fixed per-application playback device changes by using the available Windows internal audio policy WinRT activation path.
+- Added success and failure feedback for per-application output device changes.
+- Kept per-application routing guarded because this path depends on Windows audio policy support and may vary by OS build.
+
+## v0.1.3 Fixes
+
+- Added pre-switch validation that the selected device is an active endpoint and matches the requested playback or recording direction.
+- Added post-switch verification across Console, Multimedia, and Communications default device roles.
+- Added clearer Sound Mixer status messages for successful changes, inactive devices, type mismatches, and Windows apply failures.
+
+## v0.1.2 Fixes
 
 - Fixed MMDevice endpoint enumeration by correcting the `IMMDeviceCollection` COM interface ID.
 - Fixed Sound Mixer playback and recording device changes so selected active Windows audio endpoints are applied and verified correctly.
@@ -40,7 +58,7 @@ Earlier local development builds used internal version labels, and the public Gi
 Recommended release asset name:
 
 ```text
-Windget-v0.1.2-win-x64.zip
+Windget-v0.1.5-win-x64.zip
 ```
 
 ## AI Usage Disclosure
