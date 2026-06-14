@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -2143,9 +2144,9 @@ public partial class MainWindow : Window
 
     private UIElement CreateAudioSessionIconVisual(AudioSessionInfo session, double size)
     {
-        System.Windows.Controls.Image? icon = session.ProcessId > 0
-            ? CreateProcessIconImage(session.ProcessId, size)
-            : null;
+        System.Windows.Controls.Image? icon = CreateIconLocationImage(session.IconPath, size)
+            ?? CreateIconLocationImage(session.ProcessPath, size)
+            ?? (session.ProcessId > 0 ? CreateProcessIconImage(session.ProcessId, size) : null);
         if (icon is not null)
         {
             return icon;
@@ -2813,11 +2814,159 @@ public partial class MainWindow : Window
                 : System.Drawing.SystemIcons.WinLogo;
             if (icon is null)
             {
+                return CreateShellIconImage(target, size);
+            }
+
+            return CreateIconHandleImage(icon.Handle, size, false) ?? CreateShellIconImage(target, size);
+        }
+        catch
+        {
+            return CreateShellIconImage(target, size);
+        }
+    }
+
+    private static System.Windows.Controls.Image? CreateProcessIconImage(uint processId, double size)
+    {
+        string path = WindowsDisplayHelpers.TryGetProcessPath(processId);
+        return string.IsNullOrWhiteSpace(path)
+            ? null
+            : CreateAssociatedIconImage(path, size);
+    }
+
+    private static System.Windows.Controls.Image? CreateIconLocationImage(string iconLocation, double size)
+    {
+        if (string.IsNullOrWhiteSpace(iconLocation))
+        {
+            return null;
+        }
+
+        string resolvedValue = WindowsDisplayHelpers.ResolveIndirectString(iconLocation);
+        foreach (string candidate in new[] { resolvedValue, iconLocation }.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            System.Windows.Controls.Image? icon = CreateIconLocationCandidateImage(candidate, size);
+            if (icon is not null)
+            {
+                return icon;
+            }
+        }
+
+        return null;
+    }
+
+    private static System.Windows.Controls.Image? CreateIconLocationCandidateImage(string iconLocation, double size)
+    {
+        string value = iconLocation;
+        value = Environment.ExpandEnvironmentVariables(value.Trim().Trim('"'));
+        if (value.StartsWith('@'))
+        {
+            value = value[1..].Trim().Trim('"');
+        }
+
+        (string target, int? iconIndex) = ParseIconLocation(value);
+        if (string.IsNullOrWhiteSpace(target) || !File.Exists(target))
+        {
+            return null;
+        }
+
+        if (iconIndex is int index)
+        {
+            System.Windows.Controls.Image? resourceIcon = CreateResourceIconImage(target, index, size);
+            if (resourceIcon is not null)
+            {
+                return resourceIcon;
+            }
+        }
+
+        return CreateAssociatedIconImage(target, size);
+    }
+
+    private static (string Target, int? IconIndex) ParseIconLocation(string value)
+    {
+        string expanded = Environment.ExpandEnvironmentVariables(value.Trim().Trim('"'));
+        if (File.Exists(expanded))
+        {
+            return (expanded, null);
+        }
+
+        int commaIndex = expanded.LastIndexOf(',');
+        if (commaIndex <= 0 || commaIndex >= expanded.Length - 1)
+        {
+            return (expanded, null);
+        }
+
+        string path = expanded[..commaIndex].Trim().Trim('"');
+        string indexText = expanded[(commaIndex + 1)..].Trim();
+        return int.TryParse(indexText, out int iconIndex)
+            ? (path, iconIndex)
+            : (expanded, null);
+    }
+
+    private static System.Windows.Controls.Image? CreateResourceIconImage(string target, int iconIndex, double size)
+    {
+        IntPtr[] largeIcons = [IntPtr.Zero];
+        IntPtr[] smallIcons = [IntPtr.Zero];
+        try
+        {
+            uint count = ExtractIconEx(target, iconIndex, largeIcons, smallIcons, 1);
+            IntPtr iconHandle = largeIcons[0] != IntPtr.Zero ? largeIcons[0] : smallIcons[0];
+            if (count == 0 || iconHandle == IntPtr.Zero)
+            {
                 return null;
             }
 
+            IntPtr unusedIconHandle = iconHandle == largeIcons[0] ? smallIcons[0] : largeIcons[0];
+            if (unusedIconHandle != IntPtr.Zero && unusedIconHandle != iconHandle)
+            {
+                DestroyIcon(unusedIconHandle);
+            }
+
+            return CreateIconHandleImage(iconHandle, size, true);
+        }
+        catch
+        {
+            if (largeIcons[0] != IntPtr.Zero)
+            {
+                DestroyIcon(largeIcons[0]);
+            }
+
+            if (smallIcons[0] != IntPtr.Zero && smallIcons[0] != largeIcons[0])
+            {
+                DestroyIcon(smallIcons[0]);
+            }
+        }
+
+        return null;
+    }
+
+    private static System.Windows.Controls.Image? CreateShellIconImage(string target, double size)
+    {
+        if (!File.Exists(target) && !Directory.Exists(target))
+        {
+            return null;
+        }
+
+        SHFILEINFO info = new();
+        uint flags = ShgfiIcon | ShgfiLargeIcon;
+        IntPtr result = SHGetFileInfo(target, 0, ref info, (uint)Marshal.SizeOf<SHFILEINFO>(), flags);
+        if (result == IntPtr.Zero || info.hIcon == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        return CreateIconHandleImage(info.hIcon, size, true);
+    }
+
+    private static System.Windows.Controls.Image? CreateIconHandleImage(IntPtr iconHandle, double size, bool destroyHandle)
+    {
+        if (iconHandle == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        try
+        {
             ImageSource source = Imaging.CreateBitmapSourceFromHIcon(
-                icon.Handle,
+                iconHandle,
                 Int32Rect.Empty,
                 BitmapSizeOptions.FromWidthAndHeight((int)Math.Ceiling(size), (int)Math.Ceiling(size)));
             source.Freeze();
@@ -2836,24 +2985,13 @@ public partial class MainWindow : Window
         {
             return null;
         }
-    }
-
-    private static System.Windows.Controls.Image? CreateProcessIconImage(uint processId, double size)
-    {
-        try
+        finally
         {
-            using Process process = Process.GetProcessById((int)processId);
-            string? path = process.MainModule?.FileName;
-            if (!string.IsNullOrWhiteSpace(path))
+            if (destroyHandle)
             {
-                return CreateAssociatedIconImage(path, size);
+                DestroyIcon(iconHandle);
             }
         }
-        catch
-        {
-        }
-
-        return null;
     }
 
     private static bool IsImagePath(string value)
@@ -3437,6 +3575,159 @@ public partial class MainWindow : Window
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    private const uint ShgfiIcon = 0x000000100;
+    private const uint ShgfiLargeIcon = 0x000000000;
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr SHGetFileInfo(
+        string pszPath,
+        uint dwFileAttributes,
+        ref SHFILEINFO psfi,
+        uint cbFileInfo,
+        uint uFlags);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint ExtractIconEx(
+        string lpszFile,
+        int nIconIndex,
+        IntPtr[]? phiconLarge,
+        IntPtr[]? phiconSmall,
+        uint nIcons);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool DestroyIcon(IntPtr hIcon);
+}
+
+internal static class WindowsDisplayHelpers
+{
+    private const int ProcessQueryLimitedInformation = 0x1000;
+
+    public static string ResolveAudioSessionDisplayName(string displayName, uint processId)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return string.Empty;
+        }
+
+        string trimmed = displayName.Trim();
+        if (processId == 0 && IsIndirectString(trimmed))
+        {
+            return "System Volume";
+        }
+
+        string resolved = ResolveIndirectString(trimmed);
+        if (!string.IsNullOrWhiteSpace(resolved) && !IsIndirectString(resolved))
+        {
+            return resolved.Trim();
+        }
+
+        return IsIndirectString(trimmed) ? string.Empty : trimmed;
+    }
+
+    public static string ResolveIndirectString(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || !IsIndirectString(value))
+        {
+            return value;
+        }
+
+        try
+        {
+            StringBuilder buffer = new(1024);
+            int hresult = SHLoadIndirectString(value, buffer, (uint)buffer.Capacity, IntPtr.Zero);
+            return hresult >= 0 && buffer.Length > 0 ? buffer.ToString() : string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    public static string TryGetProcessPath(uint processId)
+    {
+        if (processId == 0)
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using Process process = Process.GetProcessById((int)processId);
+            string? path = process.MainModule?.FileName;
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                return path;
+            }
+        }
+        catch
+        {
+        }
+
+        IntPtr handle = IntPtr.Zero;
+        try
+        {
+            handle = OpenProcess(ProcessQueryLimitedInformation, false, (int)processId);
+            if (handle == IntPtr.Zero)
+            {
+                return string.Empty;
+            }
+
+            StringBuilder path = new(32768);
+            int size = path.Capacity;
+            return QueryFullProcessImageName(handle, 0, path, ref size)
+                ? path.ToString()
+                : string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+        finally
+        {
+            if (handle != IntPtr.Zero)
+            {
+                CloseHandle(handle);
+            }
+        }
+    }
+
+    private static bool IsIndirectString(string value)
+    {
+        return value.TrimStart().StartsWith('@');
+    }
+
+    [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
+    private static extern int SHLoadIndirectString(
+        string pszSource,
+        StringBuilder pszOutBuf,
+        uint cchOutBuf,
+        IntPtr ppvReserved);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(int dwDesiredAccess, bool bInheritHandle, int dwProcessId);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool QueryFullProcessImageName(
+        IntPtr hProcess,
+        int dwFlags,
+        StringBuilder lpExeName,
+        ref int lpdwSize);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CloseHandle(IntPtr hObject);
+}
+
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+internal struct SHFILEINFO
+{
+    public IntPtr hIcon;
+    public int iIcon;
+    public uint dwAttributes;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+    public string szDisplayName;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
+    public string szTypeName;
 }
 
 public sealed class AppState
@@ -3848,9 +4139,11 @@ internal sealed class AudioMixerService
                     }
 
                     string name = GetSessionName(control2, processId);
+                    string iconPath = GetSessionIconPath(control2);
+                    string processPath = WindowsDisplayHelpers.TryGetProcessPath(processId);
                     string outputDeviceId = string.Empty;
                     _sessionVolumes[id] = volume;
-                    sessions.Add(new AudioSessionInfo(id, name, processId, outputDeviceId, Math.Clamp(sessionVolume, 0, 1), muted));
+                    sessions.Add(new AudioSessionInfo(id, name, processId, outputDeviceId, iconPath, processPath, Math.Clamp(sessionVolume, 0, 1), muted));
                 }
                 catch
                 {
@@ -4005,9 +4298,10 @@ internal sealed class AudioMixerService
         try
         {
             control.GetDisplayName(out string displayName);
-            if (!string.IsNullOrWhiteSpace(displayName))
+            string resolvedName = WindowsDisplayHelpers.ResolveAudioSessionDisplayName(displayName, processId);
+            if (!string.IsNullOrWhiteSpace(resolvedName))
             {
-                return displayName;
+                return resolvedName;
             }
         }
         catch
@@ -4028,7 +4322,20 @@ internal sealed class AudioMixerService
         {
         }
 
-        return processId == 0 ? "System Sounds" : $"Process {processId}";
+        return processId == 0 ? "System Volume" : $"Process {processId}";
+    }
+
+    private static string GetSessionIconPath(IAudioSessionControl2 control)
+    {
+        try
+        {
+            control.GetIconPath(out string iconPath);
+            return string.IsNullOrWhiteSpace(iconPath) ? string.Empty : iconPath.Trim();
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     public bool SetDefaultDevice(string deviceId, EDataFlow flow, out string status)
@@ -4376,7 +4683,7 @@ internal sealed record AudioMixerSnapshot(
     IReadOnlyList<AudioDeviceInfo> PlaybackDevices,
     IReadOnlyList<AudioDeviceInfo> RecordingDevices,
     IReadOnlyList<AudioSessionInfo> Sessions);
-internal sealed record AudioSessionInfo(string Id, string Name, uint ProcessId, string OutputDeviceId, float Volume, bool IsMuted);
+internal sealed record AudioSessionInfo(string Id, string Name, uint ProcessId, string OutputDeviceId, string IconPath, string ProcessPath, float Volume, bool IsMuted);
 internal sealed record AudioDeviceInfo(string Id, string Name);
 
 [ComImport]

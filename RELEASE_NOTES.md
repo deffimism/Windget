@@ -1,8 +1,14 @@
-# Windget v0.1.5
+# Windget v0.1.6
 
-Windget v0.1.5 is a stability-focused patch release for Sound Mixer per-application output routing.
+Windget v0.1.6 improves Sound Mixer audio session naming and icon detection.
 
 Earlier local development builds used internal version labels, and the public GitHub release history starts from `v0.1.0`.
+
+## v0.1.6 Fixes
+
+- Changed indirect Windows audio resource names such as `@%SystemRoot%...` to display as `System Volume`.
+- Added audio-session icon path support before falling back to process icons.
+- Improved icon detection for games and protected processes by querying process image paths with limited permissions and falling back to Windows shell icon extraction.
 
 ## v0.1.5 Fixes
 
@@ -58,7 +64,7 @@ Earlier local development builds used internal version labels, and the public Gi
 Recommended release asset name:
 
 ```text
-Windget-v0.1.5-win-x64.zip
+Windget-v0.1.6-win-x64.zip
 ```
 
 ## AI Usage Disclosure
