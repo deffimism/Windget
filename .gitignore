@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+**/publish/
+release/
+**/.appdata/
+.appdata/
+.gitdata/
+**/*Chroma.png
+**/*.transparent.png
+*.user
+*.suo
+*.cache
+*.log
