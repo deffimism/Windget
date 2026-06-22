@@ -1,8 +1,34 @@
-# Windget v0.1.6
+# Windget v0.2.0
 
-Windget v0.1.6 improves Sound Mixer audio session naming and icon detection.
+Windget v0.2.0 adds MSI installation support and improves startup registration, Calendar, Quick Launcher, and Network behavior.
 
 Earlier local development builds used internal version labels, and the public GitHub release history starts from `v0.1.0`.
+
+## v0.2.0 Fixes
+
+- Added an MSI installer build path alongside the portable ZIP release.
+- MSI upgrades automatically remove older MSI-installed Windget versions through a stable UpgradeCode.
+- The MSI installs `Windget.exe` with Windget app metadata so Windows and Task Manager can identify the app name and icon more reliably.
+- Legacy startup entries from older Windget builds are cleaned up automatically when startup registration is checked or changed.
+- Startup launch now prefers a logon scheduled task for higher startup priority, with the Run registry entry kept as a fallback if task registration fails.
+- Calendar days with events now use a softer distinct highlight color.
+- Quick Launcher delete controls now appear only while Quick Launcher settings are open.
+- Network Down/Up speeds now automatically switch between KB/s, MB/s, and GB/s.
+- Documentation was reorganized around MSI installation, portable ZIP usage, and current widget behavior.
+
+## v0.1.8 Fixes
+
+- Calendar days with events now use a softer distinct highlight color.
+- Quick Launcher delete controls now appear only while Quick Launcher settings are open.
+- Network Down/Up speeds now automatically switch between KB/s, MB/s, and GB/s.
+- Windows startup registration now uses Windget executable metadata so Task Manager can identify the app name and icon more reliably.
+- Legacy startup entries from older Windget builds are cleaned up automatically when startup registration is checked or changed.
+- Startup launch now prefers a logon scheduled task for higher startup priority, with the Run registry entry kept as a fallback if task registration fails.
+
+## v0.1.7 Fixes
+
+- Added a Memo weekly reset mode with selectable weekday and reset time.
+- Calendar now automatically selects today and moves to the current month when the system date changes while Windget is running.
 
 ## v0.1.6 Fixes
 
@@ -61,10 +87,11 @@ Earlier local development builds used internal version labels, and the public Gi
 
 ## Release Artifact
 
-Recommended release asset name:
+Recommended release asset names:
 
 ```text
-Windget-v0.1.6-win-x64.zip
+Windget-v0.2.0-win-x64.msi
+Windget-v0.2.0-win-x64.zip
 ```
 
 ## AI Usage Disclosure

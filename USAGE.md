@@ -1,29 +1,84 @@
 # Windget 사용법
 
-Current public version: `v0.1.6`
+Current public version: `v0.2.0`
 
-Windget은 Windows 데스크톱 위에 배치해서 사용하는 WPF 위젯 앱입니다. 메모, 시스템 리소스, Sound Mixer, 캘린더, Timer / Stopwatch, Quick Launcher를 투명한 데스크톱 캔버스 위에 배치할 수 있습니다.
+Windget은 Windows 데스크톱 위에서 메모, 시스템 상태, Sound Mixer, 캘린더, 타이머/스톱워치, Quick Launcher를 배치해 사용하는 WPF 위젯 앱입니다.
 
 ## 설치
 
-### Release ZIP으로 설치
+### 권장: MSI 설치
 
-1. GitHub Releases에서 `Windget-v0.1.6-win-x64.zip` 파일을 다운로드합니다.
-2. 원하는 위치에 압축을 풉니다.
-3. 압축을 푼 폴더에서 `WindgetApp.exe`를 실행합니다.
-4. Windows 보안 경고가 표시되면 신뢰하는 파일인지 확인한 뒤 실행합니다.
+1. GitHub Releases에서 `Windget-v0.2.0-win-x64.msi`를 다운로드합니다.
+2. MSI를 실행해 설치합니다.
+3. 설치 후 시작 메뉴 또는 설치 폴더의 `Windget.exe`를 실행합니다.
 
-권장 설치 위치:
+MSI 설치 방식은 이전 MSI 버전의 Windget을 자동으로 제거한 뒤 새 버전을 설치합니다. Windows 작업관리자 시작프로그램 화면에서도 앱 이름과 아이콘이 `Windget`으로 인식되도록 실행 파일 메타데이터를 포함합니다.
 
-```text
-C:\Users\<사용자 이름>\Apps\Windget\
-```
+### 대안: ZIP 수동 설치
 
-`Start With Windows`는 현재 실행 중인 `WindgetApp.exe` 경로를 Windows 시작 프로그램에 등록합니다. 폴더를 옮겼다면 Windget을 다시 실행한 뒤 `Start With Windows`를 껐다가 다시 켜 주세요.
+1. GitHub Releases에서 `Windget-v0.2.0-win-x64.zip`을 다운로드합니다.
+2. 원하는 폴더에 압축을 풉니다.
+3. `Windget.exe`를 실행합니다.
 
-### 소스에서 실행
+ZIP 방식은 설치 프로그램을 쓰지 않는 휴대용 배포입니다. 폴더를 옮겼다면 `Start With Windows`를 껐다가 다시 켜서 시작프로그램 경로를 갱신하세요.
 
-.NET SDK가 설치되어 있다면 소스에서 직접 실행할 수 있습니다.
+## 시작프로그램
+
+`Control Center`의 `Start With Windows`를 켜면 Windget이 Windows 로그인 시 자동 실행됩니다.
+
+- 우선적으로 Windows 로그온 예약 작업으로 등록해 시작 우선순위를 높입니다.
+- 예약 작업 등록이 실패하면 기존 Run 등록 방식으로 대체합니다.
+- 예전 `WindgetApp.exe` 기반 시작프로그램 항목이 남아 있으면 자동으로 정리합니다.
+
+## 기본 조작
+
+- 위젯 제목 영역을 드래그하면 위치를 옮길 수 있습니다.
+- 위젯 오른쪽 아래 모서리를 드래그하면 크기를 조절할 수 있습니다.
+- `Control Center`의 `Auto`는 현재 해상도에 맞춰 위젯을 자동 배치합니다.
+- `Save`는 현재 위젯 위치, 크기, 투명도, 표시 상태를 저장합니다.
+- 트레이 아이콘으로 Control Center를 열거나 앱을 다시 표시할 수 있습니다.
+
+## Memo
+
+- 메모는 제목과 내용을 바로 편집할 수 있습니다.
+- `Open / Done` 상태를 바꿀 수 있습니다.
+- 메모별 자동 초기화 조건을 설정할 수 있습니다.
+- 초기화 모드: `After Done`, `At Time`, `Weekly`, `Monthly`
+
+## System
+
+- CPU, Memory, GPU, Network, App Memory를 표시합니다.
+- Network Down/Up 속도는 `KB/s`, `MB/s`, `GB/s`로 자동 변환됩니다.
+- CPU / Memory / GPU 그래프를 제공합니다.
+
+## Sound Mixer
+
+- 전체 볼륨과 음소거를 조절합니다.
+- 앱별 오디오 세션 볼륨과 음소거를 조절합니다.
+- 기본 재생 장치와 녹음 장치를 변경합니다.
+- 앱별 출력 장치 라우팅은 안정성을 위해 Windows App Volume Settings 화면에서 설정합니다.
+- 시스템 오디오 세션 이름과 게임/보호된 프로세스 아이콘 인식이 개선되어 있습니다.
+
+## Calendar
+
+- 날짜별 일정을 등록하고 확인할 수 있습니다.
+- 일정이 있는 날짜는 옅은 강조 색으로 표시됩니다.
+- 앱이 실행 중인 상태에서 날짜가 바뀌면 선택 날짜가 자동으로 오늘로 이동합니다.
+
+## Timer / Stopwatch
+
+- Timer와 Stopwatch 모드를 지원합니다.
+- Timer 종료 시 Windows 알림을 표시할 수 있습니다.
+- 시간 선택은 스크롤형 선택 UI를 사용합니다.
+
+## Quick Launcher
+
+- 파일, 폴더, 바로가기를 드래그 앤 드롭으로 등록합니다.
+- 카테고리를 직접 만들 수 있습니다.
+- `Icon Only` 모드로 아이콘 중심 표시가 가능합니다.
+- 삭제 아이콘은 Quick Launcher 설정이 열려 있을 때만 표시됩니다.
+
+## 소스에서 실행
 
 ```powershell
 cd WindgetApp
@@ -31,100 +86,13 @@ dotnet build
 dotnet run
 ```
 
-배포용 파일 생성:
+배포 파일 생성:
 
 ```powershell
-dotnet publish -c Release -r win-x64 --self-contained false -o .\publish\win-x64
+dotnet publish WindgetApp\WindgetApp.csproj -c Release -r win-x64 --self-contained false -o release\Windget-v0.2.0-win-x64
+powershell -NoProfile -ExecutionPolicy Bypass -File installer\Build-Msi.ps1
 ```
-
-## 기본 조작
-
-- 위젯 상단 제목 영역을 드래그하면 위치를 옮길 수 있습니다.
-- 위젯 오른쪽 아래 모서리를 드래그하면 크기를 조절할 수 있습니다.
-- 위젯을 이동하거나 크기를 조절할 때 다른 위젯의 중앙, 끝, 기준선에 가까워지면 정렬 가이드가 표시됩니다.
-- `Control Center`의 `Auto` 버튼은 현재 해상도에 맞춰 위젯 크기와 위치를 자동 정리합니다.
-- `Save` 버튼은 위젯 위치, 크기, 투명도, 표시 여부를 저장합니다.
-- 시스템 트레이의 Windget 아이콘을 왼쪽 클릭하면 다른 위젯은 그대로 두고 `Control Center`만 숨기거나 표시할 수 있습니다.
-- `Hide` 액션은 창을 시스템 트레이로 숨깁니다.
-- `Exit` 액션은 앱을 종료합니다.
-
-## Control Center
-
-- `Global Opacity`: 전체 투명도 조절
-- `Always On Top`: 항상 위에 표시
-- `Start With Windows`: Windows 로그인 시 자동 실행 등록 또는 해제
-- 위젯 토글: 원하는 위젯 표시 또는 숨김
-- `Auto`: 해상도 기반 자동 배치
-- `Save`: 현재 레이아웃 저장
-
-## Memo
-
-- 제목과 내용을 가진 메모 카드를 관리합니다.
-- 메모 제목은 카드 안에서 바로 수정할 수 있습니다.
-- `Open / Done`으로 완료 상태를 바꿀 수 있습니다.
-- 메모별 설정에서 자동 초기화 조건을 설정할 수 있습니다.
-- `After Done`: 완료 후 지정한 `Day / Hour / Minute` 뒤 초기화
-- `At Time`: 시스템 시간 기준 지정 시각에 초기화
-- `Monthly`: 매월 지정한 날짜와 시간에 초기화
-
-## System
-
-- CPU 사용률
-- Memory 사용률
-- GPU 사용률
-- Network 송수신 속도
-- App Memory
-- CPU / Memory / GPU 그래프
-
-## Sound Mixer
-
-Sound Mixer는 Windows 기본 출력/입력 장치와 현재 오디오 세션 볼륨을 조절합니다.
-
-- `Playback Device`: 현재 재생 장치 확인 및 기본 재생 장치 변경
-- `Recording Device`: 현재 녹음 장치 확인 및 기본 녹음 장치 변경
-- 장치 목록은 Windows 오디오 엔드포인트와 MMDevices 정보를 함께 사용합니다.
-- v0.1.2부터 Windows MMDevice 엔드포인트 열거가 정상 동작하도록 수정되어 기본 장치 변경이 더 안정적으로 적용됩니다.
-- v0.1.3부터 선택한 장치가 활성 재생/녹음 엔드포인트인지 먼저 검증하고, 변경 성공 또는 실패 사유를 Sound Mixer에 표시합니다.
-- v0.1.5부터 앱별 출력 장치 변경은 안정성을 위해 Windows `App Volume Settings` 화면에서 설정합니다.
-- v0.1.6부터 시스템 오디오 세션 이름과 게임/보호된 프로세스 아이콘 인식이 개선됩니다.
-- Windget은 앱별 출력 장치 설정 화면을 열어 주며, 실제 앱별 라우팅은 Windows가 관리합니다.
-- 장치 선택창은 위젯 내부의 버튼 위치에 맞춰 열리고, 목록이 길면 스크롤됩니다.
-- `Master Volume`: 전체 출력 볼륨 조절
-- `Mute`: 전체 출력 음소거
-- 앱별 오디오 세션 볼륨 조절
-- 앱별 오디오 세션 음소거
-- 앱별 오디오 세션 출력 설정 열기
-
-## Calendar
-
-- 날짜를 클릭하면 해당 날짜의 이벤트가 표시됩니다.
-- 이벤트에는 제목, 위치, 시작 시간, 종료 시간을 넣을 수 있습니다.
-- 시작/종료 시간은 시간 선택 UI로 고를 수 있습니다.
-
-## Timer / Stopwatch
-
-- `Timer`: 지정한 시간부터 카운트다운
-- `Stopwatch`: 0부터 경과 시간 측정
-- Timer 모드에서 알람을 켜면 시간이 끝났을 때 Windows 알림이 표시됩니다.
-- 시간 선택은 휠 스크롤 방식입니다.
-
-## Quick Launcher
-
-- 파일, 폴더, 바로가기를 카테고리 영역으로 드래그하면 등록됩니다.
-- 원하는 카테고리를 직접 만들 수 있습니다.
-- 카테고리를 삭제하면 그 안의 바로가기는 삭제되지 않고 `General`로 이동합니다.
-- 설정에서 `Icon Only`를 켜면 바로가기를 아이콘 중심으로 표시합니다.
-
-## 시스템 트레이
-
-창을 숨기면 시스템 트레이에 남습니다. 아이콘이 바로 보이지 않으면 Windows 작업 표시줄 오른쪽의 숨겨진 아이콘 영역에서 찾을 수 있습니다.
-
-- 트레이 아이콘 왼쪽 클릭: Control Center 표시 또는 숨김
-- 트레이 아이콘 더블 클릭: 위젯 다시 열기
-- 트레이 메뉴 `Open Widgets`: 위젯 다시 열기
-- 트레이 메뉴 `Control Center`: Control Center 표시 또는 숨김
-- 트레이 메뉴 `Exit`: 종료
 
 ## AI 사용 명시
 
-이 프로젝트는 기획, UI 설계, 코드 작성, 아이콘 제작, 문서 작성 과정에서 AI 도구의 도움을 받아 제작되었습니다. 최종 기능 구성과 수정 방향은 사용자 피드백을 바탕으로 반복 개선되었습니다.
+이 프로젝트는 기획, 구현, 문서화 과정에서 AI 도구의 도움을 받아 제작되었습니다. 최종 기능 구성과 개선 방향은 사용자 피드백을 바탕으로 조정되었습니다.

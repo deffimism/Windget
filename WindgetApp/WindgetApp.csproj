@@ -7,10 +7,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>Windget</AssemblyName>
+    <RootNamespace>WindgetApp</RootNamespace>
     <ApplicationIcon>Assets\WindgetIcon.ico</ApplicationIcon>
-    <Version>0.1.6</Version>
-    <FileVersion>0.1.6.0</FileVersion>
-    <AssemblyVersion>0.1.6.0</AssemblyVersion>
+    <AssemblyTitle>Windget</AssemblyTitle>
+    <Product>Windget</Product>
+    <FileDescription>Windget</FileDescription>
+    <Description>Windget desktop widget app</Description>
+    <Company>Windget</Company>
+    <Authors>Windget</Authors>
+    <Version>0.2.0</Version>
+    <FileVersion>0.2.0.0</FileVersion>
+    <AssemblyVersion>0.2.0.0</AssemblyVersion>
+    <InformationalVersion>0.2.0</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

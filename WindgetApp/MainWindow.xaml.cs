@@ -42,6 +42,9 @@ public partial class MainWindow : Window
     private const int WsExAppWindow = 0x00040000;
     private const string StartupRegistryName = "Windget";
     private const string StartupRegistryPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    private const string StartupTaskName = "Windget";
+    private static readonly string[] LegacyStartupRegistryNames = ["WindgetApp"];
+    private static readonly string[] LegacyStartupExecutableNames = ["WindgetApp.exe"];
 
     private readonly ObservableCollection<TaskItem> _tasks = [];
     private readonly ObservableCollection<LauncherItem> _launchers = [];
@@ -66,6 +69,7 @@ public partial class MainWindow : Window
     private AppState _state = new();
     private DateTime _calendarMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateTime _selectedDate = DateTime.Today;
+    private DateTime _lastCalendarDate = DateTime.Today;
     private FrameworkElement? _draggedWidget;
     private FrameworkElement? _resizedWidget;
     private ResizeModeEdge _resizeEdge = ResizeModeEdge.None;
@@ -848,6 +852,7 @@ public partial class MainWindow : Window
 
         WpfToggleButton doneModeButton = CreateSegmentButton("After Done", "\uE73E", task.Reset.Anchor == ResetAnchor.DoneTime);
         WpfToggleButton clockModeButton = CreateSegmentButton("At Time", "\uE823", task.Reset.Anchor == ResetAnchor.ClockTime);
+        WpfToggleButton weeklyModeButton = CreateSegmentButton("Weekly", "\uE787", task.Reset.Anchor == ResetAnchor.WeeklyDay);
         WpfToggleButton monthlyModeButton = CreateSegmentButton("Monthly", "\uE787", task.Reset.Anchor == ResetAnchor.MonthlyDay);
         WpfButton doneDelayButton = new()
         {
@@ -931,6 +936,45 @@ public partial class MainWindow : Window
             Margin = new Thickness(0, 0, 8, 0)
         };
 
+        WpfButton weeklyDayDownButton = new()
+        {
+            Content = "",
+            Tag = "\uE738",
+            Style = (Style)FindResource("CompactIconButton"),
+            Margin = new Thickness(0, 0, 4, 0)
+        };
+        WpfButton weeklyDayUpButton = new()
+        {
+            Content = "",
+            Tag = "\uE710",
+            Style = (Style)FindResource("CompactIconButton"),
+            Margin = new Thickness(4, 0, 8, 0)
+        };
+        TextBlock weeklyDayValueText = new()
+        {
+            Text = WeeklyDayText(task.Reset.WeeklyDay),
+            MinWidth = 44,
+            TextAlignment = TextAlignment.Center,
+            FontWeight = FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center,
+            Padding = new Thickness(8, 6, 8, 6)
+        };
+        Border weeklyDayTile = new()
+        {
+            Background = new SolidColorBrush(WpfColor.FromRgb(38, 51, 66)),
+            BorderBrush = (WpfBrush)FindResource("LineBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(9),
+            Child = weeklyDayValueText
+        };
+        TextBlock weeklyDaySuffix = new()
+        {
+            Text = "Weekday",
+            Style = (Style)FindResource("MutedText"),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0)
+        };
+
         WpfToggleButton minuteButton = CreateSegmentButton("Min", "\uE121", task.Reset.Unit == ResetUnit.Minute);
         WpfToggleButton hourButton = CreateSegmentButton("Hour", "\uE121", task.Reset.Unit == ResetUnit.Hour);
         WpfToggleButton dayButton = CreateSegmentButton("Day", "\uE787", task.Reset.Unit == ResetUnit.Day);
@@ -955,19 +999,24 @@ public partial class MainWindow : Window
             TextTrimming = TextTrimming.CharacterEllipsis
         };
 
-        StackPanel firstRow = new() { Orientation = WpfOrientation.Horizontal };
+        WrapPanel firstRow = new() { Orientation = WpfOrientation.Horizontal };
         firstRow.Children.Add(enabledCheck);
         firstRow.Children.Add(doneModeButton);
         firstRow.Children.Add(clockModeButton);
+        firstRow.Children.Add(weeklyModeButton);
         firstRow.Children.Add(monthlyModeButton);
         firstRow.Children.Add(nextText);
 
-        StackPanel secondRow = new()
+        WrapPanel secondRow = new()
         {
             Orientation = WpfOrientation.Horizontal,
             Margin = new Thickness(0, 7, 0, 0)
         };
         secondRow.Children.Add(doneDelayButton);
+        secondRow.Children.Add(weeklyDayDownButton);
+        secondRow.Children.Add(weeklyDayTile);
+        secondRow.Children.Add(weeklyDayUpButton);
+        secondRow.Children.Add(weeklyDaySuffix);
         secondRow.Children.Add(monthlyDayDownButton);
         secondRow.Children.Add(monthlyDayTile);
         secondRow.Children.Add(monthlyDayUpButton);
@@ -977,9 +1026,14 @@ public partial class MainWindow : Window
         void RefreshResetUi()
         {
             bool isDoneMode = task.Reset.Anchor == ResetAnchor.DoneTime;
+            bool isWeeklyMode = task.Reset.Anchor == ResetAnchor.WeeklyDay;
             bool isMonthlyMode = task.Reset.Anchor == ResetAnchor.MonthlyDay;
             bool isClockMode = task.Reset.Anchor == ResetAnchor.ClockTime;
             doneDelayButton.Visibility = isDoneMode ? Visibility.Visible : Visibility.Collapsed;
+            weeklyDayDownButton.Visibility = isWeeklyMode ? Visibility.Visible : Visibility.Collapsed;
+            weeklyDayTile.Visibility = isWeeklyMode ? Visibility.Visible : Visibility.Collapsed;
+            weeklyDayUpButton.Visibility = isWeeklyMode ? Visibility.Visible : Visibility.Collapsed;
+            weeklyDaySuffix.Visibility = isWeeklyMode ? Visibility.Visible : Visibility.Collapsed;
             monthlyDayDownButton.Visibility = isMonthlyMode ? Visibility.Visible : Visibility.Collapsed;
             monthlyDayTile.Visibility = isMonthlyMode ? Visibility.Visible : Visibility.Collapsed;
             monthlyDayUpButton.Visibility = isMonthlyMode ? Visibility.Visible : Visibility.Collapsed;
@@ -987,8 +1041,10 @@ public partial class MainWindow : Window
             clockTimeButton.Visibility = isDoneMode ? Visibility.Collapsed : Visibility.Visible;
             doneModeButton.IsChecked = isDoneMode;
             clockModeButton.IsChecked = isClockMode;
+            weeklyModeButton.IsChecked = isWeeklyMode;
             monthlyModeButton.IsChecked = isMonthlyMode;
             doneDelayButton.Content = ResetDelayText(task.Reset);
+            weeklyDayValueText.Text = WeeklyDayText(task.Reset.WeeklyDay);
             monthlyDayValueText.Text = Math.Clamp(task.Reset.MonthlyDay, 1, 31).ToString();
             nextText.Text = TaskResetSummary(task);
         }
@@ -997,6 +1053,7 @@ public partial class MainWindow : Window
         {
             task.Reset.Enabled = enabledCheck.IsChecked == true;
             task.Reset.Interval = Math.Clamp(task.Reset.Interval, 1, 60);
+            task.Reset.WeeklyDay = Math.Clamp(task.Reset.WeeklyDay, 0, 6);
             task.Reset.MonthlyDay = Math.Clamp(task.Reset.MonthlyDay, 1, 31);
             ApplyResetDelay(task.Reset, doneDelayButton.Content?.ToString() ?? ResetDelayText(task.Reset));
             task.Reset.ClockTime = NormalizeClockTime(clockTimeButton.Content?.ToString() ?? task.Reset.ClockTime);
@@ -1027,6 +1084,16 @@ public partial class MainWindow : Window
             task.Reset.MonthlyDay = Math.Min(31, task.Reset.MonthlyDay + 1);
             SaveTaskReset();
         };
+        weeklyDayDownButton.Click += (_, _) =>
+        {
+            task.Reset.WeeklyDay = PreviousWeeklyDay(task.Reset.WeeklyDay);
+            SaveTaskReset();
+        };
+        weeklyDayUpButton.Click += (_, _) =>
+        {
+            task.Reset.WeeklyDay = NextWeeklyDay(task.Reset.WeeklyDay);
+            SaveTaskReset();
+        };
         doneModeButton.Checked += (_, _) =>
         {
             task.Reset.Anchor = ResetAnchor.DoneTime;
@@ -1035,6 +1102,11 @@ public partial class MainWindow : Window
         clockModeButton.Checked += (_, _) =>
         {
             task.Reset.Anchor = ResetAnchor.ClockTime;
+            SaveTaskReset();
+        };
+        weeklyModeButton.Checked += (_, _) =>
+        {
+            task.Reset.Anchor = ResetAnchor.WeeklyDay;
             SaveTaskReset();
         };
         monthlyModeButton.Checked += (_, _) =>
@@ -1112,6 +1184,32 @@ public partial class MainWindow : Window
         return $"{days:00}:{hours:00}:{minutes:00}";
     }
 
+    private static int PreviousWeeklyDay(int weeklyDay)
+    {
+        return (Math.Clamp(weeklyDay, 0, 6) + 6) % 7;
+    }
+
+    private static int NextWeeklyDay(int weeklyDay)
+    {
+        return (Math.Clamp(weeklyDay, 0, 6) + 1) % 7;
+    }
+
+    private static string WeeklyDayText(int weeklyDay)
+    {
+        DayOfWeek day = (DayOfWeek)Math.Clamp(weeklyDay, 0, 6);
+        return day switch
+        {
+            DayOfWeek.Sunday => "Sun",
+            DayOfWeek.Monday => "Mon",
+            DayOfWeek.Tuesday => "Tue",
+            DayOfWeek.Wednesday => "Wed",
+            DayOfWeek.Thursday => "Thu",
+            DayOfWeek.Friday => "Fri",
+            DayOfWeek.Saturday => "Sat",
+            _ => "Mon"
+        };
+    }
+
     private static void ApplyResetDelay(ResetSettings reset, string value)
     {
         TimeSpan delay = ParseResetDelay(value);
@@ -1160,7 +1258,7 @@ public partial class MainWindow : Window
         {
             task.Reset.LastResetAt = DateTime.MinValue;
         }
-        else if (isDone && task.Reset.Anchor == ResetAnchor.MonthlyDay)
+        else if (isDone && task.Reset.Anchor is ResetAnchor.WeeklyDay or ResetAnchor.MonthlyDay)
         {
             task.Reset.LastResetAt = DateTime.Now;
         }
@@ -1730,7 +1828,7 @@ public partial class MainWindow : Window
         GpuBar.Value = snapshot.GpuPercent;
         GpuText.Text = snapshot.GpuAvailable ? $"{snapshot.GpuPercent:0}%" : "Unavailable";
 
-        NetworkText.Text = $"Down {snapshot.DownloadKbps:0} KB/s   Up {snapshot.UploadKbps:0} KB/s";
+        NetworkText.Text = $"Down {FormatTransferRate(snapshot.DownloadKbps)}   Up {FormatTransferRate(snapshot.UploadKbps)}";
         AppMemoryText.Text = $"{Process.GetCurrentProcess().WorkingSet64 / 1024d / 1024d:0.0} MB";
 
         AddGraphSample(_cpuSamples, snapshot.CpuPercent);
@@ -1750,6 +1848,31 @@ public partial class MainWindow : Window
         {
             samples.Dequeue();
         }
+    }
+
+    private static string FormatTransferRate(double kilobytesPerSecond)
+    {
+        double safeValue = Math.Max(0, kilobytesPerSecond);
+        if (safeValue >= 1024 * 1024)
+        {
+            return $"{FormatRateValue(safeValue / 1024 / 1024)} GB/s";
+        }
+
+        if (safeValue >= 1024)
+        {
+            return $"{FormatRateValue(safeValue / 1024)} MB/s";
+        }
+
+        return $"{FormatRateValue(safeValue)} KB/s";
+    }
+
+    private static string FormatRateValue(double value)
+    {
+        return value >= 100
+            ? value.ToString("0")
+            : value >= 10
+                ? value.ToString("0.#")
+                : value.ToString("0.##");
     }
 
     private static void RenderGraph(double width, double height, IEnumerable<double> samples, System.Windows.Shapes.Polyline line)
@@ -2223,6 +2346,22 @@ public partial class MainWindow : Window
         DateTime now = DateTime.Now;
         ClockText.Text = now.ToString("yyyy.MM.dd ddd HH:mm:ss");
         ResourceUpdatedText.Text = $"Updated {now:HH:mm:ss}";
+        SyncCalendarDate(now.Date);
+    }
+
+    private void SyncCalendarDate(DateTime today)
+    {
+        if (today == _lastCalendarDate)
+        {
+            return;
+        }
+
+        _lastCalendarDate = today;
+        _selectedDate = today;
+        _calendarMonth = new DateTime(today.Year, today.Month, 1);
+        RenderCalendar();
+        RenderEvents();
+        SaveStateFromUi();
     }
 
     private void RenderCalendar()
@@ -2253,6 +2392,8 @@ public partial class MainWindow : Window
                 bool isSelected = date.Date == _selectedDate.Date;
                 bool hasEvents = _events.TryGetValue(DateKey(date), out List<CalendarEvent>? dateEvents)
                     && dateEvents.Count > 0;
+                WpfBrush eventDayBrush = new SolidColorBrush(WpfColor.FromArgb(135, 78, 101, 126));
+                WpfBrush eventDayBorderBrush = new SolidColorBrush(WpfColor.FromArgb(180, 150, 196, 230));
 
                 cell.Tag = date;
                 cell.Cursor = WpfCursors.Hand;
@@ -2261,9 +2402,13 @@ public partial class MainWindow : Window
                     ? new SolidColorBrush(WpfColor.FromRgb(50, 121, 101))
                     : isToday
                         ? new SolidColorBrush(WpfColor.FromRgb(42, 102, 86))
-                        : new SolidColorBrush(WpfColor.FromArgb(95, 43, 52, 64));
-                cell.BorderBrush = hasEvents || isSelected
+                        : hasEvents
+                            ? eventDayBrush
+                            : new SolidColorBrush(WpfColor.FromArgb(95, 43, 52, 64));
+                cell.BorderBrush = isSelected
                     ? (WpfBrush)FindResource("AccentBrush")
+                    : hasEvents
+                        ? eventDayBorderBrush
                     : new SolidColorBrush(WpfColor.FromArgb(80, 184, 192, 204));
 
                 StackPanel content = new() { VerticalAlignment = VerticalAlignment.Center };
@@ -2281,7 +2426,7 @@ public partial class MainWindow : Window
                         Text = $"● {dateEvents!.Count}",
                         TextAlignment = TextAlignment.Center,
                         FontSize = 10,
-                        Foreground = (WpfBrush)FindResource("AccentBrush"),
+                        Foreground = hasEvents && !isSelected ? eventDayBorderBrush : (WpfBrush)FindResource("AccentBrush"),
                         Margin = new Thickness(0, 2, 0, 0)
                     });
                 }
@@ -2520,6 +2665,7 @@ public partial class MainWindow : Window
     private void RenderLaunchers()
     {
         LauncherPanel.Children.Clear();
+        bool showDeleteButtons = LauncherSettingsPanel.Visibility == Visibility.Visible;
 
         List<string> categories = _launcherCategories
             .Concat(_launchers.Select(item => LauncherCategory(item.Category)))
@@ -2555,7 +2701,7 @@ public partial class MainWindow : Window
                 FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
             });
-            if (!category.Equals("General", StringComparison.OrdinalIgnoreCase))
+            if (showDeleteButtons && !category.Equals("General", StringComparison.OrdinalIgnoreCase))
             {
                 WpfButton deleteCategoryButton = CreateLauncherCategoryDeleteButton(category);
                 Grid.SetColumn(deleteCategoryButton, 1);
@@ -2608,11 +2754,14 @@ public partial class MainWindow : Window
                     };
                     launchButton.Click += (_, _) => Launch(item.Target);
 
-                    WpfButton deleteButton = CreateLauncherDeleteButton(item);
-
                     row.Children.Add(launchButton);
-                    Grid.SetColumn(deleteButton, 1);
-                    row.Children.Add(deleteButton);
+                    if (showDeleteButtons)
+                    {
+                        WpfButton deleteButton = CreateLauncherDeleteButton(item);
+                        Grid.SetColumn(deleteButton, 1);
+                        row.Children.Add(deleteButton);
+                    }
+
                     sectionPanel.Children.Add(row);
                 }
             }
@@ -2640,15 +2789,18 @@ public partial class MainWindow : Window
         };
         launchButton.MouseLeftButtonUp += (_, _) => Launch(item.Target);
 
-        WpfButton deleteButton = CreateLauncherDeleteButton(item);
-        deleteButton.Width = 24;
-        deleteButton.Height = 24;
-        deleteButton.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
-        deleteButton.VerticalAlignment = VerticalAlignment.Top;
-        deleteButton.Margin = new Thickness(0, -4, -4, 0);
-
         tile.Children.Add(launchButton);
-        tile.Children.Add(deleteButton);
+        if (LauncherSettingsPanel.Visibility == Visibility.Visible)
+        {
+            WpfButton deleteButton = CreateLauncherDeleteButton(item);
+            deleteButton.Width = 24;
+            deleteButton.Height = 24;
+            deleteButton.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+            deleteButton.VerticalAlignment = VerticalAlignment.Top;
+            deleteButton.Margin = new Thickness(0, -4, -4, 0);
+            tile.Children.Add(deleteButton);
+        }
+
         return tile;
     }
 
@@ -3065,10 +3217,24 @@ public partial class MainWindow : Window
     {
         try
         {
-            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(StartupRegistryPath, writable: false);
-            return key?.GetValue(StartupRegistryName) is string value
-                && !string.IsNullOrWhiteSpace(Environment.ProcessPath)
-                && value.Contains(Environment.ProcessPath, StringComparison.OrdinalIgnoreCase);
+            string? currentPath = Environment.ProcessPath;
+            using RegistryKey? key = Registry.CurrentUser.CreateSubKey(StartupRegistryPath, writable: true);
+            if (key is null)
+            {
+                return false;
+            }
+
+            CleanupLegacyStartupEntries(key, currentPath);
+            bool taskEnabled = IsStartupTaskEnabled(currentPath);
+            bool runEnabled = key.GetValue(StartupRegistryName) is string value
+                && !string.IsNullOrWhiteSpace(currentPath)
+                && value.Contains(currentPath, StringComparison.OrdinalIgnoreCase);
+            if (taskEnabled && runEnabled)
+            {
+                key.DeleteValue(StartupRegistryName, throwOnMissingValue: false);
+            }
+
+            return taskEnabled || runEnabled;
         }
         catch
         {
@@ -3080,26 +3246,141 @@ public partial class MainWindow : Window
     {
         try
         {
-            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(StartupRegistryPath, writable: true);
+            using RegistryKey? key = Registry.CurrentUser.CreateSubKey(StartupRegistryPath, writable: true);
             if (key is null)
             {
                 return;
             }
 
+            string? path = Environment.ProcessPath;
+            CleanupLegacyStartupEntries(key, path);
+
             if (!isEnabled)
             {
+                TryDeleteStartupTask();
                 key.DeleteValue(StartupRegistryName, throwOnMissingValue: false);
                 return;
             }
 
-            string? path = Environment.ProcessPath;
             if (!string.IsNullOrWhiteSpace(path))
             {
-                key.SetValue(StartupRegistryName, $"\"{path}\"");
+                if (TryRegisterStartupTask(path))
+                {
+                    key.DeleteValue(StartupRegistryName, throwOnMissingValue: false);
+                    return;
+                }
+
+                key.SetValue(StartupRegistryName, $"\"{path}\"", RegistryValueKind.String);
             }
         }
         catch
         {
+        }
+    }
+
+    private static bool IsStartupTaskEnabled(string? currentPath)
+    {
+        (bool success, string output) = RunSchtasksWithOutput("/Query", "/TN", StartupTaskName, "/XML");
+        if (!success)
+        {
+            return false;
+        }
+
+        bool isDisabled = output.Contains("<Enabled>false</Enabled>", StringComparison.OrdinalIgnoreCase);
+        bool pointsToCurrentApp = !string.IsNullOrWhiteSpace(currentPath)
+            && output.Contains(currentPath, StringComparison.OrdinalIgnoreCase);
+        bool pointsToLegacyExecutable = LegacyStartupExecutableNames.Any(name => output.Contains(name, StringComparison.OrdinalIgnoreCase));
+
+        if (isDisabled || pointsToLegacyExecutable || !pointsToCurrentApp)
+        {
+            TryDeleteStartupTask();
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryRegisterStartupTask(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        return RunSchtasks(
+            "/Create",
+            "/TN",
+            StartupTaskName,
+            "/TR",
+            $"\"{path}\"",
+            "/SC",
+            "ONLOGON",
+            "/RL",
+            "LIMITED",
+            "/F");
+    }
+
+    private static void TryDeleteStartupTask()
+    {
+        RunSchtasks("/Delete", "/TN", StartupTaskName, "/F");
+    }
+
+    private static bool RunSchtasks(params string[] arguments)
+    {
+        return RunSchtasksWithOutput(arguments).Success;
+    }
+
+    private static (bool Success, string Output) RunSchtasksWithOutput(params string[] arguments)
+    {
+        try
+        {
+            using Process process = new();
+            process.StartInfo.FileName = "schtasks.exe";
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.CreateNoWindow = true;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
+            foreach (string argument in arguments)
+            {
+                process.StartInfo.ArgumentList.Add(argument);
+            }
+
+            process.Start();
+            if (!process.WaitForExit(5000))
+            {
+                process.Kill(entireProcessTree: true);
+                return (false, string.Empty);
+            }
+
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+            return (process.ExitCode == 0, output + error);
+        }
+        catch
+        {
+            return (false, string.Empty);
+        }
+    }
+
+    private static void CleanupLegacyStartupEntries(RegistryKey key, string? currentPath)
+    {
+        foreach (string valueName in key.GetValueNames())
+        {
+            if (key.GetValue(valueName) is not string command)
+            {
+                continue;
+            }
+
+            bool pointsToCurrentApp = !string.IsNullOrWhiteSpace(currentPath)
+                && command.Contains(currentPath, StringComparison.OrdinalIgnoreCase);
+            bool isKnownWindgetEntry = valueName.Equals(StartupRegistryName, StringComparison.OrdinalIgnoreCase)
+                || LegacyStartupRegistryNames.Any(name => valueName.Equals(name, StringComparison.OrdinalIgnoreCase));
+            bool pointsToLegacyExecutable = LegacyStartupExecutableNames.Any(name => command.Contains(name, StringComparison.OrdinalIgnoreCase));
+
+            if (pointsToLegacyExecutable || (isKnownWindgetEntry && !pointsToCurrentApp))
+            {
+                key.DeleteValue(valueName, throwOnMissingValue: false);
+            }
         }
     }
 
@@ -3148,6 +3429,10 @@ public partial class MainWindow : Window
         }
 
         panel.Visibility = panel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+        if (widget?.Name == "LauncherWidget")
+        {
+            RenderLaunchers();
+        }
     }
 
     private void GlobalOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -3494,6 +3779,7 @@ public partial class MainWindow : Window
 
         _selectedDate = _state.SelectedDate.Date;
         _calendarMonth = new DateTime(_selectedDate.Year, _selectedDate.Month, 1);
+        _lastCalendarDate = DateTime.Today;
 
         _focusMinutes = Math.Max(1, _state.Focus.Minutes);
         FocusDurationButton.Content = DurationText(_focusMinutes);
@@ -3813,6 +4099,7 @@ public sealed class ResetSettings
     public int DelayMinutes { get; set; }
     public ResetAnchor Anchor { get; set; } = ResetAnchor.DoneTime;
     public string ClockTime { get; set; } = "09:00";
+    public int WeeklyDay { get; set; } = (int)DayOfWeek.Monday;
     public int MonthlyDay { get; set; } = 1;
     public DateTime? CompletedAt { get; set; }
     public DateTime LastResetAt { get; set; } = DateTime.Now;
@@ -3855,6 +4142,13 @@ public sealed class ResetSettings
             return LastResetAt >= thisMonthReset ? MonthlyResetDate(DateTime.Today.AddMonths(1).Year, DateTime.Today.AddMonths(1).Month, clockTime) : thisMonthReset;
         }
 
+        if (Anchor == ResetAnchor.WeeklyDay)
+        {
+            TimeSpan clockTime = ParseClockTime(ClockTime);
+            DateTime thisWeekReset = WeeklyResetDate(DateTime.Today, clockTime);
+            return LastResetAt >= thisWeekReset ? thisWeekReset.AddDays(7) : thisWeekReset;
+        }
+
         DateTime basis = CompletedAt ?? LastResetAt;
         return basis.Add(GetInterval());
     }
@@ -3863,6 +4157,14 @@ public sealed class ResetSettings
     {
         int day = Math.Clamp(MonthlyDay, 1, DateTime.DaysInMonth(year, month));
         return new DateTime(year, month, day, clockTime.Hours, clockTime.Minutes, 0);
+    }
+
+    private DateTime WeeklyResetDate(DateTime today, TimeSpan clockTime)
+    {
+        int targetDay = Math.Clamp(WeeklyDay, 0, 6);
+        int daysUntilReset = (targetDay - (int)today.DayOfWeek + 7) % 7;
+        DateTime resetDate = today.Date.AddDays(daysUntilReset);
+        return new DateTime(resetDate.Year, resetDate.Month, resetDate.Day, clockTime.Hours, clockTime.Minutes, 0);
     }
 
     private static TimeSpan ParseClockTime(string value)
@@ -3875,9 +4177,10 @@ public sealed class ResetSettings
 
 public enum ResetAnchor
 {
-    DoneTime,
-    ClockTime,
-    MonthlyDay
+    DoneTime = 0,
+    ClockTime = 1,
+    MonthlyDay = 2,
+    WeeklyDay = 3
 }
 
 public enum ResetUnit

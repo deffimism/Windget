@@ -1,6 +1,6 @@
 # Windget
 
-Current public version: `v0.1.6`
+Current public version: `v0.2.0`
 
 Windget is a lightweight Windows desktop widget app built with WPF and .NET. It places a transparent desktop canvas over the wallpaper and lets you arrange memo cards, system resource graphs, a sound mixer, calendar events, a timer/stopwatch, and quick launcher tiles.
 
@@ -13,7 +13,7 @@ This repository is organized as a fresh public GitHub project starting from `v0.
 - Resolution-aware Auto layout for FHD, QHD, and 4K displays
 - Alignment guide lines while moving or resizing widgets
 - System tray icon for showing or hiding Control Center
-- Optional Windows startup registration
+- Optional Windows startup registration with Windget name/icon metadata and scheduled-task priority
 - Alt+Tab hidden desktop-widget behavior
 - Transparent-background app icon
 
@@ -34,11 +34,12 @@ This repository is organized as a fresh public GitHub project starting from `v0.
 - Inline title editing
 - `Open / Done` state
 - Per-memo reset rules
-- `After Done`, `At Time`, and `Monthly` reset modes
+- `After Done`, `At Time`, `Weekly`, and `Monthly` reset modes
 
 ### System
 
 - CPU, memory, GPU, network, and app memory display
+- Network speed display with automatic KB/s, MB/s, and GB/s units
 - CPU, memory, and GPU graph views
 
 ### Sound Mixer
@@ -57,6 +58,8 @@ This repository is organized as a fresh public GitHub project starting from `v0.
 ### Calendar
 
 - Date-based event list
+- Automatically returns to today when the system date changes while the app is running
+- Softer highlight color for days with events
 - Event title, location, start time, and end time
 - Time picker UI
 
@@ -73,25 +76,28 @@ This repository is organized as a fresh public GitHub project starting from `v0.
 - User-created categories
 - Category deletion with shortcut fallback to `General`
 - Icon-only display mode
+- Delete controls only appear while Quick Launcher settings are open
 
 ## Installation
 
-Download the latest release ZIP from GitHub Releases:
+Recommended:
 
 ```text
-Windget-v0.1.6-win-x64.zip
+Windget-v0.2.0-win-x64.msi
 ```
 
-Extract it to a folder you control, then run:
+The MSI installs Windget as a Windows app, registers app metadata for Task Manager, and automatically removes older MSI-installed Windget versions during upgrade.
+
+Portable ZIP:
 
 ```text
-WindgetApp.exe
+Windget-v0.2.0-win-x64.zip
 ```
 
-Recommended install location:
+Extract the ZIP to a folder you control, then run:
 
 ```text
-C:\Users\<user name>\Apps\Windget\
+Windget.exe
 ```
 
 For details, see [USAGE.md](USAGE.md).
@@ -113,6 +119,12 @@ Create a release build:
 
 ```powershell
 dotnet publish -c Release -r win-x64 --self-contained false -o .\publish\win-x64
+```
+
+Create the MSI after publishing to the matching release folder:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\installer\Build-Msi.ps1
 ```
 
 ## Release Workflow
