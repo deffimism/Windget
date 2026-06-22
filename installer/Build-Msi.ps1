@@ -1,7 +1,7 @@
 param(
-    [string]$SourceDir = (Join-Path $PSScriptRoot "..\release\Windget-v0.2.0-win-x64"),
-    [string]$OutputPath = (Join-Path $PSScriptRoot "..\release\Windget-v0.2.0-win-x64.msi"),
-    [string]$Version = "0.2.0"
+    [string]$SourceDir = (Join-Path $PSScriptRoot "..\release\Windget-v0.2.1-win-x64"),
+    [string]$OutputPath = (Join-Path $PSScriptRoot "..\release\Windget-v0.2.1-win-x64.msi"),
+    [string]$Version = "0.2.1"
 )
 
 $ErrorActionPreference = "Stop"

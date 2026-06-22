@@ -77,6 +77,7 @@ Sql "CREATE TABLE `Media` (`DiskId` SHORT NOT NULL, `LastSequence` LONG NOT NULL
 Sql "CREATE TABLE `Upgrade` (`UpgradeCode` CHAR(38) NOT NULL, `VersionMin` CHAR(20), `VersionMax` CHAR(20), `Language` CHAR(255), `Attributes` LONG NOT NULL, `Remove` CHAR(255), `ActionProperty` CHAR(72) NOT NULL PRIMARY KEY `UpgradeCode`, `VersionMin`, `VersionMax`, `Language`, `Attributes`)"
 Sql "CREATE TABLE `InstallExecuteSequence` (`Action` CHAR(72) NOT NULL, `Condition` CHAR(255), `Sequence` SHORT PRIMARY KEY `Action`)"
 Sql "CREATE TABLE `Shortcut` (`Shortcut` CHAR(72) NOT NULL, `Directory_` CHAR(72) NOT NULL, `Name` CHAR(128) NOT NULL LOCALIZABLE, `Component_` CHAR(72) NOT NULL, `Target` CHAR(72) NOT NULL, `Arguments` CHAR(255), `Description` CHAR(255) LOCALIZABLE, `Hotkey` SHORT, `Icon_` CHAR(72), `IconIndex` SHORT, `ShowCmd` SHORT, `WkDir` CHAR(72) PRIMARY KEY `Shortcut`)"
+Sql "CREATE TABLE `ActionText` (`Action` CHAR(72) NOT NULL, `Description` CHAR(128) LOCALIZABLE, `Template` CHAR(128) LOCALIZABLE PRIMARY KEY `Action`)"
 
 AddRow "Property", Array("Property", "Value"), Array("ProductCode", productCode)
 AddRow "Property", Array("Property", "Value"), Array("ProductName", "Windget")
@@ -86,6 +87,7 @@ AddRow "Property", Array("Property", "Value"), Array("Manufacturer", "Windget")
 AddRow "Property", Array("Property", "Value"), Array("UpgradeCode", upgradeCode)
 AddRow "Property", Array("Property", "Value"), Array("ARPNOREPAIR", "1")
 AddRow "Property", Array("Property", "Value"), Array("SecureCustomProperties", "OLDWINDGETPRODUCTS")
+AddRow "Property", Array("Property", "Value"), Array("LIMITUI", "1")
 
 AddRow "Directory", Array("Directory", "Directory_Parent", "DefaultDir"), Array("TARGETDIR", Null, "SourceDir")
 AddRow "Directory", Array("Directory", "Directory_Parent", "DefaultDir"), Array("LocalAppDataFolder", "TARGETDIR", ".")
@@ -142,6 +144,26 @@ AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array
 AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array("PublishFeatures", Null, 6300)
 AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array("PublishProduct", Null, 6400)
 AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array("InstallFinalize", Null, 6600)
+
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("FindRelatedProducts", "Checking for older Windget installations", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("CostInitialize", "Preparing Windget installation", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("FileCost", "Calculating required disk space", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("CostFinalize", "Finalizing installation plan", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("MigrateFeatureStates", "Migrating previous Windget settings", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("InstallValidate", "Validating Windget installation", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("RemoveExistingProducts", "Removing older Windget installation", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("InstallInitialize", "Starting Windget installation", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("ProcessComponents", "Registering Windget components", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("UnpublishFeatures", "Updating Windget feature registration", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("RemoveRegistryValues", "Cleaning old Windget registry entries", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("RemoveShortcuts", "Updating Windget shortcuts", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("RemoveFiles", "Removing old Windget files", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("InstallFiles", "Installing Windget files", "[1]")
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("CreateShortcuts", "Creating Windget shortcuts", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("RegisterProduct", "Registering Windget", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("PublishFeatures", "Publishing Windget features", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("PublishProduct", "Publishing Windget product information", Null)
+AddRow "ActionText", Array("Action", "Description", "Template"), Array("InstallFinalize", "Completing Windget installation", Null)
 
 AddStream "Windget.cab", cabPath
 

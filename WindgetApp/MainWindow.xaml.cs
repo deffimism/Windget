@@ -3662,6 +3662,13 @@ public partial class MainWindow : Window
         HideToTray();
     }
 
+    private void HideControlCenter_Click(object sender, RoutedEventArgs e)
+    {
+        ControlWidget.Visibility = Visibility.Collapsed;
+        _state.Window.ControlCenterVisible = false;
+        SaveStateFromUi();
+    }
+
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
         _isExitRequested = true;

@@ -300,12 +300,13 @@
                                FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0" />
                 </StackPanel>
 
-                <StackPanel Grid.Row="2" Orientation="Horizontal">
+                <WrapPanel Grid.Row="2" Orientation="Horizontal">
                     <Button Content="Auto" Tag="&#xE8B3;" Style="{StaticResource IconActionButton}" Click="AutoLayout_Click" Margin="0,0,8,0" />
                     <Button Content="Save" Tag="&#xE74E;" Style="{StaticResource IconActionButton}" Click="SaveLayout_Click" Margin="0,0,8,0" />
+                    <Button Content="Hide Center" Tag="&#xE921;" Style="{StaticResource IconActionButton}" Click="HideControlCenter_Click" Margin="0,0,8,0" />
                     <Button Content="Hide" Tag="&#xE921;" Style="{StaticResource IconActionButton}" Click="Minimize_Click" Margin="0,0,8,0" />
                     <Button Content="Exit" Tag="&#xE8BB;" Style="{StaticResource IconActionButton}" Click="Exit_Click" />
-                </StackPanel>
+                </WrapPanel>
             </Grid>
         </Border>
 

@@ -1,8 +1,16 @@
-# Windget v0.2.0
+# Windget v0.2.1
 
-Windget v0.2.0 adds MSI installation support and improves startup registration, Calendar, Quick Launcher, and Network behavior.
+Windget v0.2.1 adds a Control Center-only hide action and finalizes the v0.2 installer/package metadata updates.
 
 Earlier local development builds used internal version labels, and the public GitHub release history starts from `v0.1.0`.
+
+## v0.2.1 Fixes
+
+- Added a `Hide Center` button in Control Center that hides only Control Center while leaving the other widgets visible.
+- The tray Control Center action can show Control Center again after using `Hide Center`.
+- Added a `setup.exe` bootstrapper that embeds the MSI and keeps a loading window visible until Windows Installer finishes.
+- MSI installs still include basic progress metadata, but the setup executable is the recommended install path for consistent visible progress.
+- Updated the release version, documentation, MSI defaults, and packaged artifact names to v0.2.1.
 
 ## v0.2.0 Fixes
 
@@ -92,8 +100,9 @@ Earlier local development builds used internal version labels, and the public Gi
 Recommended release asset names:
 
 ```text
-Windget-v0.2.0-win-x64.msi
-Windget-v0.2.0-win-x64.zip
+Windget-v0.2.1-win-x64.msi
+Windget-v0.2.1-win-x64-setup.exe
+Windget-v0.2.1-win-x64.zip
 ```
 
 ## AI Usage Disclosure

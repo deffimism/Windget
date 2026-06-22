@@ -1,6 +1,6 @@
 # Windget
 
-Current public version: `v0.2.0`
+Current public version: `v0.2.1`
 
 Windget is a lightweight Windows desktop widget app built with WPF and .NET. It places a transparent desktop canvas over the wallpaper and lets you arrange memo cards, system resource graphs, a sound mixer, calendar events, a timer/stopwatch, and quick launcher tiles.
 
@@ -25,6 +25,7 @@ This repository is organized as a fresh public GitHub project starting from `v0.
 - Adjust global opacity
 - Save layout state
 - Auto-arrange widgets for the current monitor resolution
+- Hide only the Control Center without hiding all widgets
 - Toggle `Always On Top`
 - Register or remove Windows startup launch
 
@@ -83,7 +84,15 @@ This repository is organized as a fresh public GitHub project starting from `v0.
 Recommended:
 
 ```text
-Windget-v0.2.0-win-x64.msi
+Windget-v0.2.1-win-x64-setup.exe
+```
+
+The setup executable contains the MSI package and keeps a loading window open until Windows Installer finishes.
+
+Direct MSI package:
+
+```text
+Windget-v0.2.1-win-x64.msi
 ```
 
 The MSI installs Windget for the current user under `%LOCALAPPDATA%\Programs\Windget`, registers app metadata for Task Manager, and automatically removes older or same-version MSI-installed Windget builds during upgrade.
@@ -91,7 +100,7 @@ The MSI installs Windget for the current user under `%LOCALAPPDATA%\Programs\Win
 Portable ZIP:
 
 ```text
-Windget-v0.2.0-win-x64.zip
+Windget-v0.2.1-win-x64.zip
 ```
 
 Extract the ZIP to a folder you control, then run:
@@ -125,6 +134,7 @@ Create the MSI after publishing to the matching release folder:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\installer\Build-Msi.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\installer\Build-Setup.ps1
 ```
 
 ## Release Workflow

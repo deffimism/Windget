@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>WindgetSetup</AssemblyName>
+    <RootNamespace>WindgetSetup</RootNamespace>
+    <ApplicationIcon>..\..\WindgetApp\Assets\WindgetIcon.ico</ApplicationIcon>
+    <AssemblyTitle>Windget Setup</AssemblyTitle>
+    <Product>Windget Setup</Product>
+    <FileDescription>Windget Setup</FileDescription>
+    <Description>Windget installer bootstrapper</Description>
+    <Company>Windget</Company>
+    <Authors>Windget</Authors>
+    <Version>0.2.1</Version>
+    <FileVersion>0.2.1.0</FileVersion>
+    <AssemblyVersion>0.2.1.0</AssemblyVersion>
+    <InformationalVersion>0.2.1</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(MsiPath)' != ''">
+    <EmbeddedResource Include="$(MsiPath)" LogicalName="WindgetInstaller.msi" />
+  </ItemGroup>
+</Project>
