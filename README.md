@@ -86,7 +86,7 @@ Recommended:
 Windget-v0.2.0-win-x64.msi
 ```
 
-The MSI installs Windget as a Windows app, registers app metadata for Task Manager, and automatically removes older MSI-installed Windget versions during upgrade.
+The MSI installs Windget for the current user under `%LOCALAPPDATA%\Programs\Windget`, registers app metadata for Task Manager, and automatically removes older or same-version MSI-installed Windget builds during upgrade.
 
 Portable ZIP:
 

@@ -1,12 +1,13 @@
 Option Explicit
 
-Dim outputPath, cabPath, manifestPath, version, productCode, upgradeCode
+Dim outputPath, cabPath, manifestPath, version, productCode, upgradeCode, packageCode
 outputPath = WScript.Arguments(0)
 cabPath = WScript.Arguments(1)
 manifestPath = WScript.Arguments(2)
 version = WScript.Arguments(3)
 productCode = WScript.Arguments(4)
 upgradeCode = WScript.Arguments(5)
+packageCode = WScript.Arguments(6)
 
 Dim installer, database
 Set installer = CreateObject("WindowsInstaller.Installer")
@@ -80,15 +81,16 @@ Sql "CREATE TABLE `Shortcut` (`Shortcut` CHAR(72) NOT NULL, `Directory_` CHAR(72
 AddRow "Property", Array("Property", "Value"), Array("ProductCode", productCode)
 AddRow "Property", Array("Property", "Value"), Array("ProductName", "Windget")
 AddRow "Property", Array("Property", "Value"), Array("ProductVersion", version)
+AddRow "Property", Array("Property", "Value"), Array("ProductLanguage", "1033")
 AddRow "Property", Array("Property", "Value"), Array("Manufacturer", "Windget")
 AddRow "Property", Array("Property", "Value"), Array("UpgradeCode", upgradeCode)
-AddRow "Property", Array("Property", "Value"), Array("ALLUSERS", "1")
 AddRow "Property", Array("Property", "Value"), Array("ARPNOREPAIR", "1")
 AddRow "Property", Array("Property", "Value"), Array("SecureCustomProperties", "OLDWINDGETPRODUCTS")
 
 AddRow "Directory", Array("Directory", "Directory_Parent", "DefaultDir"), Array("TARGETDIR", Null, "SourceDir")
-AddRow "Directory", Array("Directory", "Directory_Parent", "DefaultDir"), Array("ProgramFiles64Folder", "TARGETDIR", ".")
-AddRow "Directory", Array("Directory", "Directory_Parent", "DefaultDir"), Array("INSTALLFOLDER", "ProgramFiles64Folder", "Windget")
+AddRow "Directory", Array("Directory", "Directory_Parent", "DefaultDir"), Array("LocalAppDataFolder", "TARGETDIR", ".")
+AddRow "Directory", Array("Directory", "Directory_Parent", "DefaultDir"), Array("LocalProgramsFolder", "LocalAppDataFolder", "Programs")
+AddRow "Directory", Array("Directory", "Directory_Parent", "DefaultDir"), Array("INSTALLFOLDER", "LocalProgramsFolder", "Windget")
 AddRow "Directory", Array("Directory", "Directory_Parent", "DefaultDir"), Array("ProgramMenuFolder", "TARGETDIR", ".")
 AddRow "Directory", Array("Directory", "Directory_Parent", "DefaultDir"), Array("ApplicationProgramsFolder", "ProgramMenuFolder", "Windget")
 AddRow "Feature", Array("Feature", "Feature_Parent", "Title", "Description", "Display", "Level", "Directory_", "Attributes"), Array("DefaultFeature", Null, "Windget", "Windget desktop widget app", 1, 1, "INSTALLFOLDER", 0)
@@ -118,7 +120,7 @@ If Len(exeComponent) > 0 Then
 End If
 
 AddRow "Media", Array("DiskId", "LastSequence", "DiskPrompt", "Cabinet", "VolumeLabel", "Source"), Array(1, rowCount, Null, "#Windget.cab", Null, Null)
-AddRow "Upgrade", Array("UpgradeCode", "VersionMin", "VersionMax", "Language", "Attributes", "Remove", "ActionProperty"), Array(upgradeCode, Null, version, Null, 1, "ALL", "OLDWINDGETPRODUCTS")
+AddRow "Upgrade", Array("UpgradeCode", "VersionMin", "VersionMax", "Language", "Attributes", "Remove", "ActionProperty"), Array(upgradeCode, Null, version, Null, 513, "ALL", "OLDWINDGETPRODUCTS")
 
 AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array("FindRelatedProducts", Null, 25)
 AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array("ValidateProductID", Null, 700)
@@ -136,7 +138,6 @@ AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array
 AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array("RemoveFiles", Null, 3500)
 AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array("InstallFiles", Null, 4000)
 AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array("CreateShortcuts", Null, 4500)
-AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array("RegisterUser", Null, 6000)
 AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array("RegisterProduct", Null, 6100)
 AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array("PublishFeatures", Null, 6300)
 AddRow "InstallExecuteSequence", Array("Action", "Condition", "Sequence"), Array("PublishProduct", Null, 6400)
@@ -150,8 +151,9 @@ summary.Property(2) = "Installation Database"
 summary.Property(3) = "Windget Installer"
 summary.Property(4) = "Windget"
 summary.Property(7) = "x64;1033"
-summary.Property(9) = "{000C1084-0000-0000-C000-000000000046}"
+summary.Property(9) = packageCode
 summary.Property(14) = 200
+summary.Property(15) = 2
 summary.Persist
 
 database.Commit

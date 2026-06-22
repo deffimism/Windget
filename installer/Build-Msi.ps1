@@ -34,7 +34,8 @@ function New-MsiIdentifier([string]$prefix, [string]$name) {
     return "$prefix$safe"
 }
 
-$productCode = New-DeterministicGuid "$upgradeCode|$Version"
+$productCode = "{" + ([Guid]::NewGuid().ToString().ToUpperInvariant()) + "}"
+$packageCode = "{" + ([Guid]::NewGuid().ToString().ToUpperInvariant()) + "}"
 
 if (!(Test-Path -LiteralPath $SourceDir)) {
     throw "Source directory was not found: $SourceDir"
@@ -105,7 +106,7 @@ foreach ($row in $fileRows) {
 Set-Content -LiteralPath $manifestPath -Value $manifestLines -Encoding ASCII
 
 $createMsiScript = Join-Path $PSScriptRoot "Create-Msi.vbs"
-& cscript.exe //nologo $createMsiScript $resolvedOutputPath $cabPath $manifestPath $Version $productCode $upgradeCode
+& cscript.exe //nologo $createMsiScript $resolvedOutputPath $cabPath $manifestPath $Version $productCode $upgradeCode $packageCode
 if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $resolvedOutputPath)) {
     throw "MSI creation failed: $resolvedOutputPath"
 }

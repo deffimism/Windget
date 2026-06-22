@@ -7,7 +7,9 @@ Earlier local development builds used internal version labels, and the public Gi
 ## v0.2.0 Fixes
 
 - Added an MSI installer build path alongside the portable ZIP release.
-- MSI upgrades automatically remove older MSI-installed Windget versions through a stable UpgradeCode.
+- MSI now installs per-user under `%LOCALAPPDATA%\Programs\Windget`.
+- MSI upgrades automatically remove older or same-version MSI-installed Windget builds through a stable UpgradeCode.
+- Fixed MSI package metadata so embedded cabinet files are recognized correctly instead of triggering Windows Installer error 1316.
 - The MSI installs `Windget.exe` with Windget app metadata so Windows and Task Manager can identify the app name and icon more reliably.
 - Legacy startup entries from older Windget builds are cleaned up automatically when startup registration is checked or changed.
 - Startup launch now prefers a logon scheduled task for higher startup priority, with the Run registry entry kept as a fallback if task registration fails.
